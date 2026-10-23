@@ -14,6 +14,12 @@ Linee guida e documentazione dettagliata. Per la panoramica del progetto vedi il
 | [Template](template.md) | Issue, bug, pull request, commit, classi Java, test, decisioni, verbali, `.editorconfig` |
 | [Checklist PR](checklist-pr.md) | Controlli da fare prima di aprire una pull request |
 
+## Proposte da discutere
+
+| Documento | Contenuto |
+|-----------|-----------|
+| [Proposta di regolamento](proposte/proposta-regolamento-dreams-nightmares.pdf) (PDF) | Modalità Base ed Effetti, mazzo, rarità, rank, con esempi a tema Dreams & Nightmares e motivazioni delle modifiche |
+
 ## Altre cartelle
 
 | Cartella | Contenuto |
