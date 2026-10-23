@@ -438,17 +438,45 @@ Con `validate`, Hibernate **non** modifica il database: controlla solo che le en
 
 ## Punti aperti
 
-| Punto | Da decidere | Chi |
-|-------|-------------|-----|
-| Autenticazione | JWT (serve `refresh_tokens`) o sessioni di Spring (`refresh_tokens` si toglie) | SWD |
-| Come si ottengono i crediti in fase 1 | Determina i valori di `credit_transactions.type` | DGS (Maie) |
-| Vincolo di bilanciamento | Solo limiti per TIER, oppure anche un "costo" per carta con budget per mazzo (servirebbe `cards.power_cost`) | Nicolas + Maie (COM-04) |
-| Valori del regolamento | Punti vita, carte per mazzo, copie massime, limite di turni: nel file di configurazione o in una tabella `game_settings` modificabile dal backoffice | SWD |
-| Scadenza di scambi e sfide | Se una proposta in attesa scade dopo un certo tempo (servirebbe uno stato `EXPIRED`) | Tutti |
-| Modalità di gioco aggiuntive | Se si fanno, quali modalità e quali effetti (righe di `game_modes`, `effects`, `card_effects`) | Tutti |
-| Momenti in cui scatta un effetto | La lista di `trigger_event` (`ON_ENTER`, `ON_DEATH`, `ON_ATTACK`, `PASSIVE`) è una proposta: si allarga o si riduce in base agli effetti scelti | Nicolas + Valerio |
-| Carte non creatura (incantesimi, potenziamenti) | Seconda variante suggerita dal brief. Servirebbero `cards.card_type` e ATT/DIF facoltativi: si aggiunge con una migration solo se si decide di farla | Tutti |
-| Notifiche | Se servono avvisi per sfide e scambi ricevuti (tabella `notifications`) | WMD + SWD |
+Decisioni da prendere prima di trasformare la proposta in migration. La colonna "Proposta" è un suggerimento di partenza, non una decisione.
+
+### Gioco ed economia
+
+| Punto | Da decidere | Proposta | Chi |
+|-------|-------------|----------|-----|
+| Come si ottengono i crediti in fase 1 | Bonus di registrazione, ricompensa giornaliera, premi per le vittorie, vendita di carte doppie... Determina i valori di `credit_transactions.type` | Bonus di registrazione + ricompensa giornaliera + premio vittoria | DGS (Maie) |
+| Dotazione iniziale del nuovo utente | Con cosa parte chi si registra: solo crediti, pacchetti gratuiti o un mazzo starter. Senza carte non può comporre un mazzo né sfidare | Crediti iniziali sufficienti per qualche pacchetto, oppure un mazzo starter (aperture con `price_paid = 0`) | DGS + Nicolas |
+| Estrazione delle carte nei pacchetti | Dentro un TIER ogni carta ha la stessa probabilità, oppure servono pesi per carta (`cards.drop_weight`)? Servono slot "a probabilità" (es. 90% rara, 10% epica)? | Numero fisso per TIER (`pack_slots`) e probabilità uguale dentro il TIER | Maie + Nicolas |
+| Pacchetti non aperti | Il pacchetto si apre subito all'acquisto, oppure l'utente può tenerlo e aprirlo dopo (servirebbe un inventario dei pacchetti) | Apertura immediata, come nella proposta | DGS + WMD |
+| Vincolo di bilanciamento | Solo limiti per TIER, oppure anche un "costo" per carta con budget per mazzo (servirebbe `cards.power_cost`) | Limiti per TIER, come suggerito dal brief | Nicolas + Maie (COM-04) |
+| Valori del regolamento | Punti vita, carte per mazzo, copie massime, limite di turni: nel file di configurazione o in una tabella `game_settings` modificabile dal backoffice | File di configurazione | SWD |
+| Modifica di carte già distribuite | Se l'admin può cambiare ATT/DIF di una carta che gli utenti già possiedono (ribilanciamento). Lo storico è protetto dalle copie dei mazzi in `matches`, ma i mazzi esistenti potrebbero diventare non validi | Permessa, con ricontrollo dei mazzi alla sfida | Tutti |
+| Mazzi non validi | Si possono salvare come bozza (servirebbe `decks.is_valid`) o si salvano solo i mazzi validi? | Solo mazzi validi; un mazzo che lo diventa dopo uno scambio viene segnalato alla sfida | SWD + WMD |
+| Carte impegnate in scambi in attesa | Se una carta offerta in uno scambio in attesa resta usabile (in altri scambi e nei mazzi) o viene bloccata finché lo scambio non si chiude | Non bloccata: tutto si ricontrolla quando lo scambio viene accettato | SWD |
+| Scadenza di scambi e sfide | Se una proposta in attesa scade dopo un certo tempo (servirebbe uno stato `EXPIRED`) | Nessuna scadenza in fase 1; chi propone può annullare | Tutti |
+| Modalità di gioco aggiuntive | Se si fanno, quali modalità e quali effetti (righe di `game_modes`, `effects`, `card_effects`) | Prima la modalità BASE completa, poi eventualmente una modalità con effetti | Tutti |
+| Momenti in cui scatta un effetto | La lista di `trigger_event` (`ON_ENTER`, `ON_DEATH`, `ON_ATTACK`, `PASSIVE`) si allarga o si riduce in base agli effetti scelti | Partire da `ON_ENTER` e `ON_DEATH`, gli esempi del brief | Nicolas + Valerio |
+| Carte non creatura (incantesimi, potenziamenti) | Seconda variante suggerita dal brief. Servirebbero `cards.card_type` e ATT/DIF facoltativi | Non in fase 1; si aggiunge con una migration solo se si decide di farla | Tutti |
+| Notifiche | Se servono avvisi per sfide e scambi ricevuti (tabella `notifications`) | Basta un contatore delle richieste in attesa, calcolato da `trades` e `challenges` | WMD + SWD |
+
+### Utenti, accesso e privacy
+
+| Punto | Da decidere | Proposta | Chi |
+|-------|-------------|----------|-----|
+| Autenticazione | Sessioni di Spring Security (`refresh_tokens` si toglie) o JWT (serve `refresh_tokens`) | Sessioni con cookie `HttpOnly` | SWD |
+| Sessioni dopo un riavvio | Solo con le sessioni: in memoria (si perdono a ogni riavvio del server) o su MySQL con Spring Session JDBC (servono le sue tabelle in una migration) | In memoria in fase 1 | SWD |
+| Invio di email | Se il portale invia email (recupero password, verifica dell'account). Senza invio di email `password_reset_tokens` non serve | Solo recupero password, se c'è tempo; altrimenti si toglie la tabella | SWD |
+| Dati e consensi alla registrazione | Quali dati si chiedono (es. data di nascita per l'età minima) e se si registra l'accettazione della Privacy Policy (servirebbe `users.privacy_accepted_at`) | Salvare la data di accettazione della Privacy Policy | DGS + SWD |
+| Cancellazione dell'account | Lo schema non cancella mai gli utenti, ma la privacy prevede il diritto alla cancellazione | Anonimizzare l'utente (username ed email sostituiti, `is_enabled = FALSE`) invece di cancellarlo | SWD |
+| Creazione del primo admin | Come nasce l'account admin senza scrivere una password nel repository | Creato all'avvio da username e password letti da variabili d'ambiente | SWD |
+
+### Tecniche
+
+| Punto | Da decidere | Proposta | Chi |
+|-------|-------------|----------|-----|
+| Immagini delle carte | Dove stanno le immagini e come si caricano dal backoffice: file statici nel progetto o caricamento dal backoffice in una cartella del server | Caricamento dal backoffice in una cartella del server; nel database solo il percorso (`image_url`) | SWD + WMD |
+| Fuso orario delle date | In che fuso si salvano le date. Conta per esempio per il reset della ricompensa giornaliera | Tutto in UTC nel database, conversione nel frontend | SWD |
+| Database per i test | Con cosa si testano repository e service: H2 in memoria o MySQL vero (Testcontainers o database di test). H2 non supporta bene colonne `JSON` e alcuni `CHECK` | MySQL vero per i test di integrazione; il motore di gioco si testa senza database | SWD |
 
 ---
 
