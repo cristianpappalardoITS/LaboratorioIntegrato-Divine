@@ -14,6 +14,13 @@ Linee guida e documentazione dettagliata. Per la panoramica del progetto vedi il
 | [Template](template.md) | Issue, bug, pull request, commit, classi Java, test, decisioni, verbali, `.editorconfig` |
 | [Checklist PR](checklist-pr.md) | Controlli da fare prima di aprire una pull request |
 
+## Progettazione
+
+| Documento | Contenuto |
+|-----------|-----------|
+| [Proposta di schema del database](database/schema.md) | **Da verificare.** Tabelle, diagrammi ER, scelte, regole dei service, migration Flyway |
+| [schema.sql](database/schema.sql) | SQL completo dello schema, diviso nelle future migration |
+
 ## Altre cartelle
 
 | Cartella | Contenuto |

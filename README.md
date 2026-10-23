@@ -61,3 +61,4 @@ Le linee guida del progetto sono in [`docs/`](docs/README.md):
 - [Documentazione](docs/documentazione.md): cosa documentare e dove
 - [Template](docs/template.md)
 - [Checklist prima di aprire una pull request](docs/checklist-pr.md)
+- [Proposta di schema del database](docs/database/schema.md) (da verificare)
