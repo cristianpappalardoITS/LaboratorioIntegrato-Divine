@@ -106,24 +106,45 @@ CREATE TABLE rarities (
     CONSTRAINT chk_rarities_max_per_deck CHECK (max_per_deck IS NULL OR max_per_deck >= 0)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
+-- Le espansioni (set di carte): set base, espansione 1, ...
+-- Servono per i pacchetti che contengono solo le carte di un'espansione.
+CREATE TABLE card_sets (
+    id          BIGINT      NOT NULL AUTO_INCREMENT,
+    code        VARCHAR(20) NOT NULL,
+    name        VARCHAR(80) NOT NULL,
+    description TEXT        NULL,
+    released_at DATE        NULL,
+    is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_card_sets PRIMARY KEY (id),
+    CONSTRAINT uq_card_sets_code UNIQUE (code),
+    CONSTRAINT uq_card_sets_name UNIQUE (name)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
 -- Le carte del catalogo (tutte creature). Una carta posseduta da qualcuno
 -- non si cancella: si disattiva con is_active = FALSE.
+-- code è un identificativo stabile (es. BASE-001): resta uguale anche se il nome
+-- cambia, si usa nelle migration con i dati e per il nome dei file immagine.
 CREATE TABLE cards (
     id          BIGINT       NOT NULL AUTO_INCREMENT,
+    code        VARCHAR(20)  NOT NULL,
     name        VARCHAR(80)  NOT NULL,
     description TEXT         NULL,
     attack      INT          NOT NULL,
     defense     INT          NOT NULL,
     faction_id  BIGINT       NOT NULL,
     rarity_id   BIGINT       NOT NULL,
+    card_set_id BIGINT       NOT NULL,
     image_url   VARCHAR(500) NULL,
     is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT pk_cards PRIMARY KEY (id),
+    CONSTRAINT uq_cards_code UNIQUE (code),
     CONSTRAINT uq_cards_name UNIQUE (name),
     CONSTRAINT fk_cards_faction FOREIGN KEY (faction_id) REFERENCES factions (id),
     CONSTRAINT fk_cards_rarity FOREIGN KEY (rarity_id) REFERENCES rarities (id),
+    CONSTRAINT fk_cards_card_set FOREIGN KEY (card_set_id) REFERENCES card_sets (id),
     CONSTRAINT chk_cards_attack CHECK (attack >= 0),
     CONSTRAINT chk_cards_defense CHECK (defense > 0)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
@@ -209,17 +230,21 @@ CREATE TABLE deck_cards (
 -- ============================================================================
 
 -- I pacchetti in vendita nel negozio (gestiti dal backoffice).
+-- card_set_id: se valorizzato, il pacchetto pesca solo le carte di quell'espansione;
+-- NULL = pesca da tutte le espansioni attive.
 CREATE TABLE packs (
     id            BIGINT       NOT NULL AUTO_INCREMENT,
     name          VARCHAR(60)  NOT NULL,
     description   TEXT         NULL,
     price_credits INT          NOT NULL,
+    card_set_id   BIGINT       NULL,
     image_url     VARCHAR(500) NULL,
     is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT pk_packs PRIMARY KEY (id),
     CONSTRAINT uq_packs_name UNIQUE (name),
+    CONSTRAINT fk_packs_card_set FOREIGN KEY (card_set_id) REFERENCES card_sets (id),
     CONSTRAINT chk_packs_price CHECK (price_credits > 0)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 

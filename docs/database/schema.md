@@ -14,8 +14,9 @@
 4. [Regole che il database non controlla](#regole-che-il-database-non-controlla)
 5. [Formato dei campi JSON di `matches`](#formato-dei-campi-json-di-matches)
 6. [Migration Flyway](#migration-flyway)
-7. [Punti aperti](#punti-aperti)
-8. [Requisiti del brief coperti](#requisiti-del-brief-coperti)
+7. [Dati del catalogo ed espansioni](#dati-del-catalogo-ed-espansioni)
+8. [Punti aperti](#punti-aperti)
+9. [Requisiti del brief coperti](#requisiti-del-brief-coperti)
 
 ---
 
@@ -29,7 +30,8 @@
 | Catalogo carte | `factions` | Le fazioni |
 | | `faction_advantages` | Chi è forte contro chi e con che bonus |
 | | `rarities` | I TIER di rarità, con il limite per mazzo |
-| | `cards` | Le carte-creatura con ATT, DIF, fazione, rarità |
+| | `card_sets` | Le espansioni: set base, espansione 1... |
+| | `cards` | Le carte-creatura con codice, ATT, DIF, fazione, rarità, espansione |
 | Collezione e mazzi | `user_cards` | Le carte possedute da ogni utente, con il numero di copie |
 | | `decks` | I mazzi degli utenti |
 | | `deck_cards` | Le carte di ogni mazzo |
@@ -65,6 +67,7 @@ erDiagram
     cards ||--o{ deck_cards : "usata in"
     factions ||--o{ cards : "raggruppa"
     rarities ||--o{ cards : "classifica"
+    card_sets ||--o{ cards : "contiene"
     factions ||--o{ faction_advantages : "forte contro"
     factions ||--o{ faction_advantages : "debole contro"
 
@@ -109,13 +112,22 @@ erDiagram
         int sort_order UK
         int max_per_deck "NULL = nessun limite"
     }
+    card_sets {
+        bigint id PK
+        varchar code UK "BASE, EXP1, ..."
+        varchar name UK
+        date released_at
+        boolean is_active
+    }
     cards {
         bigint id PK
+        varchar code UK "es. BASE-001"
         varchar name UK
         int attack
         int defense
         bigint faction_id FK
         bigint rarity_id FK
+        bigint card_set_id FK
         varchar image_url
         boolean is_active
     }
@@ -143,6 +155,7 @@ erDiagram
 ```mermaid
 erDiagram
     packs ||--|{ pack_slots : "composto da"
+    card_sets |o--o{ packs : "da cui pesca"
     rarities ||--o{ pack_slots : "TIER dello slot"
     users ||--o{ pack_openings : "acquista"
     packs ||--o{ pack_openings : "acquistato in"
@@ -152,10 +165,15 @@ erDiagram
     pack_openings |o--o| credit_transactions : "pagato con"
     matches |o--o{ credit_transactions : "premio"
 
+    card_sets {
+        bigint id PK
+        varchar code UK
+    }
     packs {
         bigint id PK
         varchar name UK
         int price_credits
+        bigint card_set_id FK "NULL = tutte le espansioni"
         boolean is_active
     }
     pack_slots {
@@ -289,6 +307,8 @@ erDiagram
 | **Fazioni e vantaggi in tabella** | Numero di fazioni, relazioni e tipo di vantaggio sono ancora da decidere: si cambiano dal database senza toccare il codice. Due colonne (`attack_bonus`, `defense_bonus`) coprono attacco, difesa o entrambi. |
 | **Limite per TIER in `rarities.max_per_deck`** | È il vincolo di bilanciamento suggerito dal brief ("massimo 8 rare e 2 mitiche"). |
 | **Composizione dei pacchetti in `pack_slots`** | Il brief chiede un numero preciso di carte per ogni TIER. Dentro un TIER la carta si estrae a caso tra quelle attive. |
+| **Espansioni** (`card_sets`) con pacchetti legati a un'espansione (`packs.card_set_id`) | Permette pacchetti che contengono solo le carte nuove. Con `card_set_id = NULL` il pacchetto pesca da tutte le espansioni. |
+| **Codice stabile per ogni carta** (`cards.code`, es. `BASE-001`) | Le migration con i dati e i nomi dei file immagine usano il codice, che non cambia se si corregge il nome della carta. |
 | **Acquisto = apertura** (`pack_openings`) | L'utente compra e apre subito il pacchetto: un solo passaggio, un solo record. `price_paid` conserva il prezzo anche se poi cambia. |
 | **Copie dei mazzi in `matches`** (JSON) | Lo storico resta corretto anche se l'utente modifica o cancella il mazzo, o scambia le carte, dopo la partita. |
 | **Log turno per turno come JSON** | Si legge sempre tutto insieme, non serve interrogare i singoli turni. Una tabella dei turni si può aggiungere in futuro se servisse. |
@@ -326,10 +346,12 @@ Un mazzo può diventare non valido dopo, se l'utente scambia carte che ci stavan
    UPDATE users SET credits = credits - :price WHERE id = :userId AND credits >= :price;
    ```
    Se aggiorna 0 righe, il saldo è insufficiente.
-2. Estrae le carte secondo `pack_slots`, lato server.
+2. Estrae le carte secondo `pack_slots`, lato server: per ogni slot pesca tra le carte attive di quel TIER e, se il pacchetto ha `card_set_id`, solo di quell'espansione.
 3. Scrive `pack_openings`, `pack_opening_cards`, `credit_transactions` e aggiorna `user_cards`.
 
 Tutto nella stessa transazione: o va a buon fine tutto, o niente.
+
+Dal backoffice un pacchetto si può attivare solo se, per ogni slot, esiste almeno una carta attiva del TIER (e dell'espansione, se indicata). Altrimenti l'apertura non saprebbe cosa estrarre.
 
 ### Scambi
 
@@ -367,7 +389,7 @@ Proposta da concordare con chi sviluppa il motore di gioco.
   "deckName": "Mazzo offensivo",
   "cards": [
     {
-      "cardId": 3, "name": "Nome carta", "attack": 4, "defense": 3,
+      "cardId": 3, "cardCode": "BASE-001", "name": "Nome carta", "attack": 4, "defense": 3,
       "faction": "FACTION_CODE", "rarity": "COMMON", "quantity": 2,
       "effects": [ { "code": "HEAL_OWNER_ON_ENTER", "triggerEvent": "ON_ENTER", "value": 2 } ]
     }
@@ -412,7 +434,7 @@ Nella modalità BASE `effects` è sempre una lista vuota.
 | File | Tabelle |
 |------|---------|
 | `V1__create_users_and_auth.sql` | `users`, `refresh_tokens`, `password_reset_tokens` |
-| `V2__create_card_catalog.sql` | `factions`, `faction_advantages`, `rarities`, `cards`, `effects`, `card_effects` |
+| `V2__create_card_catalog.sql` | `factions`, `faction_advantages`, `rarities`, `card_sets`, `cards`, `effects`, `card_effects` |
 | `V3__create_collections_and_decks.sql` | `user_cards`, `decks`, `deck_cards` |
 | `V4__create_packs.sql` | `packs`, `pack_slots`, `pack_openings`, `pack_opening_cards` |
 | `V5__create_trades.sql` | `trades`, `trade_items` |
@@ -423,7 +445,7 @@ L'ordine conta: ogni file crea tabelle che dipendono solo da quelle dei file pre
 
 ### Dati iniziali
 
-Fazioni, rarità, carte, pacchetti e l'utente admin si caricano con migration separate, dopo le tabelle (es. `V100__seed_factions_and_rarities.sql`). Si scrivono quando DGS e Nicolas avranno definito i valori.
+Fazioni, rarità, espansioni, carte e pacchetti si caricano con migration separate, dopo le tabelle. Come organizzarle è spiegato in [Dati del catalogo ed espansioni](#dati-del-catalogo-ed-espansioni).
 
 ### Configurazione Spring Boot
 
@@ -433,6 +455,73 @@ spring.jpa.hibernate.ddl-auto=validate
 ```
 
 Con `validate`, Hibernate **non** modifica il database: controlla solo che le entità corrispondano alle tabelle create da Flyway.
+
+---
+
+## Dati del catalogo ed espansioni
+
+### Chi gestisce cosa
+
+| Dati | Come si caricano | Perché |
+|------|------------------|--------|
+| **Catalogo ufficiale**: fazioni, vantaggi, rarità, espansioni, carte, pacchetti | **Migration Flyway** con i dati | Partono da sole all'avvio, sono versionate su Git e revisionate in PR, sono uguali per tutti e finiscono nell'export di consegna |
+| **Gestione dal vivo**: attivare/disattivare carte e pacchetti, cambiare prezzi, correggere testi, pacchetti promozionali | **Backoffice** | Richiesto dal brief, non serve scrivere SQL |
+| **Dati di prova**: utenti finti, collezioni e mazzi di esempio | Migration in una cartella separata (`db/dev-data`), caricata **solo in sviluppo** con un profilo Spring | Non devono finire nel database di consegna |
+| **Primo admin** | Creato all'avvio da variabili d'ambiente (vedi [Punti aperti](#punti-aperti)) | Nessuna password nel repository |
+
+Non serve nessuno script esterno per avviare il progetto: Flyway carica tutto da solo. Uno script (es. Python) può servire solo a chi sviluppa, per trasformare il foglio di calcolo delle carte preparato da DGS nel file SQL della migration. Si lancia una volta e si committa l'SQL generato.
+
+### Il database non si svuota
+
+I dati stanno nel volume Docker di MySQL e restano a ogni riavvio. Flyway esegue solo le migration nuove: quelle già applicate sono registrate nella tabella `flyway_schema_history`. Il database si azzera solo con `docker compose down -v`, e al riavvio successivo Flyway ricrea tabelle e catalogo da zero.
+
+### Numerazione delle migration
+
+| Numeri | Contenuto | Esempio |
+|--------|-----------|---------|
+| `V1`–`V99` | Struttura: tabelle, colonne, indici | `V8__add_power_cost_to_cards.sql` |
+| `V100`–`V199` | Catalogo ufficiale | `V100__seed_factions_and_rarities.sql`, `V101__seed_base_set.sql`, `V102__seed_base_packs.sql` |
+| ... | Ogni espansione nuova prosegue la numerazione | `V103__expansion_1.sql` |
+
+Flyway esegue le migration in ordine di numero. Una migration già eseguita **non si modifica mai**: per correggere una carta si scrive una nuova migration con un `UPDATE`.
+
+### Convenzioni del catalogo
+
+- **Codice carta:** `<codice espansione>-<numero a 3 cifre>`, es. `BASE-001`, `EXP1-012`.
+- **Immagini:** il file ha il nome del codice in minuscolo, es. `base-001.webp`. Le immagini del catalogo ufficiale stanno nel repository; quelle caricate dal backoffice nel volume dei file caricati.
+- **Riferimenti tra tabelle nelle migration:** sempre tramite `code` (fazione, rarità, espansione, carta), mai tramite `id` scritti a mano.
+- **Il catalogo ufficiale cambia solo con le migration.** Se si crea dal backoffice una carta che poi viene inserita anche da una migration, Flyway fallisce sul codice duplicato.
+
+### Esempio: nuova espansione con il suo pacchetto
+
+```sql
+-- V103__expansion_1.sql
+
+INSERT INTO card_sets (code, name, released_at)
+VALUES ('EXP1', 'Espansione 1', '2026-12-01');
+
+-- Una INSERT per ogni carta, con fazione, rarità ed espansione cercate per codice
+INSERT INTO cards (code, name, description, attack, defense, faction_id, rarity_id, card_set_id, image_url)
+SELECT 'EXP1-001', 'Nome carta', 'Testo descrittivo', 5, 3, f.id, r.id, s.id, '/images/cards/exp1-001.webp'
+FROM factions f, rarities r, card_sets s
+WHERE f.code = 'FACTION_CODE' AND r.code = 'EPIC' AND s.code = 'EXP1';
+
+-- Il pacchetto pesca solo dalle carte di EXP1
+INSERT INTO packs (name, price_credits, card_set_id)
+SELECT 'Pacchetto Espansione 1', 150, id FROM card_sets WHERE code = 'EXP1';
+
+-- Composizione: 3 COMMON + 1 RARE + 1 EPIC
+INSERT INTO pack_slots (pack_id, rarity_id, card_count)
+SELECT p.id, r.id, x.card_count
+FROM packs p
+JOIN (SELECT 'COMMON' AS code, 3 AS card_count
+      UNION ALL SELECT 'RARE', 1
+      UNION ALL SELECT 'EPIC', 1) x
+JOIN rarities r ON r.code = x.code
+WHERE p.name = 'Pacchetto Espansione 1';
+```
+
+Al primo avvio dopo il merge, Flyway esegue il file una sola volta: le carte nuove e il pacchetto compaiono nel negozio.
 
 ---
 
@@ -447,6 +536,7 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Come si ottengono i crediti in fase 1 | Bonus di registrazione, ricompensa giornaliera, premi per le vittorie, vendita di carte doppie... Determina i valori di `credit_transactions.type` | Bonus di registrazione + ricompensa giornaliera + premio vittoria | DGS (Maie) |
 | Dotazione iniziale del nuovo utente | Con cosa parte chi si registra: solo crediti, pacchetti gratuiti o un mazzo starter. Senza carte non può comporre un mazzo né sfidare | Crediti iniziali sufficienti per qualche pacchetto, oppure un mazzo starter (aperture con `price_paid = 0`) | DGS + Nicolas |
 | Estrazione delle carte nei pacchetti | Dentro un TIER ogni carta ha la stessa probabilità, oppure servono pesi per carta (`cards.drop_weight`)? Servono slot "a probabilità" (es. 90% rara, 10% epica)? | Numero fisso per TIER (`pack_slots`) e probabilità uguale dentro il TIER | Maie + Nicolas |
+| Espansioni e mazzi | Se le carte di tutte le espansioni si possono usare insieme in un mazzo, o servono formati con solo alcune espansioni | Tutte insieme in fase 1 | Nicolas + DGS |
 | Pacchetti non aperti | Il pacchetto si apre subito all'acquisto, oppure l'utente può tenerlo e aprirlo dopo (servirebbe un inventario dei pacchetti) | Apertura immediata, come nella proposta | DGS + WMD |
 | Vincolo di bilanciamento | Solo limiti per TIER, oppure anche un "costo" per carta con budget per mazzo (servirebbe `cards.power_cost`) | Limiti per TIER, come suggerito dal brief | Nicolas + Maie (COM-04) |
 | Valori del regolamento | Punti vita, carte per mazzo, copie massime, limite di turni: nel file di configurazione o in una tabella `game_settings` modificabile dal backoffice | File di configurazione | SWD |
@@ -496,7 +586,7 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Creature con attacco, difesa e fazione | `cards` |
 | Fazioni con vantaggi reciproci | `factions`, `faction_advantages` |
 | Fine partita per punti vita, mazzi esauriti o limite di turni | `matches.end_reason` |
-| Backoffice per catalogo carte e pacchetti | `cards`, `packs`, `pack_slots` (+ `users.role = 'ADMIN'`) |
+| Backoffice per catalogo carte e pacchetti | `card_sets`, `cards`, `packs`, `pack_slots` (+ `users.role = 'ADMIN'`) |
 | Modalità di gioco separate e attivabili | `game_modes`, `challenges.game_mode_id` |
 | Abilità speciali delle creature (variante facoltativa) | `effects`, `card_effects` |
 | Acquisto crediti con denaro reale | **Escluso dalla fase 1**: nessuna tabella |
