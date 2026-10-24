@@ -1,0 +1,13 @@
+codice;nome;fazione;rarita;attacco;difesa;descrizione;effetto;illustrazione;zoom;centro_y
+BASE-001;Il Rifugio Sicuro;Dreams;Comune;2;8;Il desiderio di un posto dove nulla può raggiungerti.;Guscio 1: subisce 1 danno in meno da ogni colpo.;base-001.png;;
+BASE-002;Il Volo Sopra la Città;Dreams;Rara;4;5;Per una notte, la gravità smette di contare.;Slancio onirico 1: +1 attacco finché resta in campo.;base-002.png;;
+BASE-003;Il Faro nella Nebbia;Dreams;Epica;4;7;Una luce lontana che indica sempre la strada di casa.;Riposo 1: a fine round recupera 1 difesa.;base-003.png;;
+BASE-004;Il Sogno Lucido;Dreams;Leggendaria;5;7;Sai di sognare, e il sogno ti obbedisce.;Mente lucida: il vantaggio di fazione avversario non si applica contro di lei.;base-004.png;;0,27
+BASE-005;Il Dente Che Cade;Nightmares;Comune;4;2;Un incubo piccolo, ma che ritorna sempre.;Ultimo grido 1: quando muore, 1 danno al giocatore avversario.;base-005.png;;
+BASE-006;La Caduta Senza Fine;Nightmares;Rara;7;3;La sensazione di perdere il controllo, senza mai toccare terra.;Disperazione 2: +2 attacco quando la sua difesa è scesa alla metà o meno.;base-006.png;;
+BASE-007;La Stanza Senza Porte;Nightmares;Epica;6;5;Quattro muri, nessuna uscita, e il respiro che accelera.;Insonnia 1: a fine round il giocatore avversario perde 1 punto vita.;base-007.png;;
+BASE-008;L'Uomo Senza Volto;Nightmares;Leggendaria;8;5;La paura dell'ignoto ha un corpo, ma non un viso.;Paralisi notturna 2: quando entra, la creatura avversaria perde 2 attacco.;base-008.png;;
+BASE-009;Il Ricordo Sbiadito;Memories;Comune;3;5;Il timore di dimenticare ciò che contava.;Ricordo dolce 2: quando muore, il proprio giocatore recupera 2 punti vita.;base-009.png;;
+BASE-010;Il Déjà-vu;Memories;Rara;4;5;Hai già vissuto questo momento. Sai come finisce.;Eco del passato 2: quando entra, 2 danni alla creatura avversaria.;base-010.png;;
+BASE-011;Il Corridoio Infinito;Memories;Epica;3;7;Smarrimento e incertezza, porta dopo porta.;Sogno ricorrente: quando muore torna in fondo al mazzo (una volta per partita).;base-011.png;;
+BASE-012;La Custode del Tempo Fermo;Memories;Leggendaria;6;6;Custodisce l'attimo che non vuoi lasciare andare.;Eredità 2: quando muore, la prossima creatura pescata ha +2 difesa.;base-012.png;;
