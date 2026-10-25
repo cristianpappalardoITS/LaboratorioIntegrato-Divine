@@ -151,11 +151,12 @@ CREATE TABLE card_sets (
 -- non si cancella: si disattiva con is_active = FALSE.
 -- code è un identificativo stabile (es. BASE-001): resta uguale anche se il nome
 -- cambia, si usa nelle migration con i dati e per il nome dei file immagine.
--- Si salva solo l'illustrazione: il frontend disegna la carta (cornice di fazione
--- e rarità, nome, statistiche, testi), così una modifica dal backoffice si vede subito.
--- illustration_url: illustrazione orizzontale 3:2 per la carta normale.
--- full_art_url: illustrazione verticale 2:3 per la versione full art (solo Leggendarie,
+-- Si salva l'immagine della carta finita (cornice, illustrazione, nome, statistiche
+-- e testi), prodotta con il compositore delle carte (carte/compositore): il frontend
+-- la mostra così com'è.
+-- image_url: carta normale. full_art_image_url: versione full art (solo Leggendarie,
 -- controllato dal service). La full art è la stessa carta: cambia solo l'immagine.
+-- ATT, DIF e testi sono stampati sull'immagine: se cambiano, l'immagine va ricomposta.
 -- attack >= 1: con attacco almeno 1 la partita Base finisce sempre (regolamento 14.3).
 CREATE TABLE cards (
     id               BIGINT       NOT NULL AUTO_INCREMENT,
@@ -167,8 +168,8 @@ CREATE TABLE cards (
     faction_id       BIGINT       NOT NULL,
     rarity_id        BIGINT       NOT NULL,
     card_set_id      BIGINT       NOT NULL,
-    illustration_url VARCHAR(500) NULL,
-    full_art_url     VARCHAR(500) NULL,
+    image_url          VARCHAR(500) NULL,
+    full_art_image_url VARCHAR(500) NULL,
     is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
