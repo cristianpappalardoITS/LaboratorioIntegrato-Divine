@@ -18,24 +18,31 @@
 -- rating è il punteggio del rank (tipo Elo, si parte da 1000). Si usa solo quando
 -- il rank viene attivato, dopo le funzionalità obbligatorie. Le leghe non si salvano:
 -- si calcolano dal punteggio.
+-- privacy_accepted_at / terms_accepted_at: quando il giocatore ha accettato Privacy Policy
+-- e Termini di servizio alla registrazione. Obbligatori per i giocatori; l'admin, creato
+-- all'avvio da variabili d'ambiente, non passa dalla registrazione.
 CREATE TABLE users (
-    id            BIGINT       NOT NULL AUTO_INCREMENT,
-    username      VARCHAR(30)  NOT NULL,
-    email         VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role          VARCHAR(20)  NOT NULL DEFAULT 'PLAYER',
-    credits       INT          NOT NULL DEFAULT 0,
-    rating        INT          NOT NULL DEFAULT 1000,
-    is_enabled    BOOLEAN      NOT NULL DEFAULT TRUE,
-    last_login_at DATETIME     NULL,
-    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    id                  BIGINT       NOT NULL AUTO_INCREMENT,
+    username            VARCHAR(30)  NOT NULL,
+    email               VARCHAR(255) NOT NULL,
+    password_hash       VARCHAR(255) NOT NULL,
+    role                VARCHAR(20)  NOT NULL DEFAULT 'PLAYER',
+    credits             INT          NOT NULL DEFAULT 0,
+    rating              INT          NOT NULL DEFAULT 1000,
+    is_enabled          BOOLEAN      NOT NULL DEFAULT TRUE,
+    privacy_accepted_at DATETIME     NULL,
+    terms_accepted_at   DATETIME     NULL,
+    last_login_at       DATETIME     NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT pk_users PRIMARY KEY (id),
     CONSTRAINT uq_users_username UNIQUE (username),
     CONSTRAINT uq_users_email UNIQUE (email),
     CONSTRAINT chk_users_role CHECK (role IN ('PLAYER', 'ADMIN')),
     CONSTRAINT chk_users_credits CHECK (credits >= 0),
-    CONSTRAINT chk_users_rating CHECK (rating >= 0)
+    CONSTRAINT chk_users_rating CHECK (rating >= 0),
+    CONSTRAINT chk_users_consents CHECK (role = 'ADMIN'
+                                         OR (privacy_accepted_at IS NOT NULL AND terms_accepted_at IS NOT NULL))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- Solo se l'autenticazione usa JWT: un refresh token per dispositivo/sessione.
@@ -548,3 +555,28 @@ CREATE TABLE credit_transactions (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE INDEX idx_credit_transactions_user_created ON credit_transactions (user_id, created_at);
+
+
+-- ============================================================================
+-- V8__create_contact_messages.sql
+-- ============================================================================
+
+-- I messaggi inviati dal form della pagina Contatti. L'admin li legge nella pagina
+-- Messaggi del backoffice: nessun invio di email da configurare.
+-- user_id è valorizzato se chi scrive ha fatto l'accesso, NULL per i visitatori.
+-- status: NEW = da leggere, READ = letto, ARCHIVED = archiviato.
+CREATE TABLE contact_messages (
+    id         BIGINT       NOT NULL AUTO_INCREMENT,
+    user_id    BIGINT       NULL,
+    name       VARCHAR(80)  NOT NULL,
+    email      VARCHAR(255) NOT NULL,
+    message    TEXT         NOT NULL,
+    status     VARCHAR(20)  NOT NULL DEFAULT 'NEW',
+    created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at    DATETIME     NULL,
+    CONSTRAINT pk_contact_messages PRIMARY KEY (id),
+    CONSTRAINT fk_contact_messages_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT chk_contact_messages_status CHECK (status IN ('NEW', 'READ', 'ARCHIVED'))
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE INDEX idx_contact_messages_status_created ON contact_messages (status, created_at);

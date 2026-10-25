@@ -18,7 +18,8 @@
 7. [Dati del catalogo ed espansioni](#dati-del-catalogo-ed-espansioni)
 8. [Punti aperti](#punti-aperti)
 9. [Requisiti del brief coperti](#requisiti-del-brief-coperti)
-10. [Cosa è cambiato in questa versione](#cosa-è-cambiato-in-questa-versione)
+10. [Pagine del portale e tabelle](#pagine-del-portale-e-tabelle)
+11. [Cosa è cambiato in questa versione](#cosa-è-cambiato-in-questa-versione)
 
 ---
 
@@ -26,7 +27,7 @@
 
 | Area | Tabella | Contenuto |
 |------|---------|-----------|
-| Utenti e accesso | `users` | Giocatori e admin (`role`), saldo crediti, punteggio di rank |
+| Utenti e accesso | `users` | Giocatori e admin (`role`), saldo crediti, punteggio di rank, consensi Privacy e Termini |
 | | `refresh_tokens` | Token di accesso, solo se si usa JWT |
 | | `password_reset_tokens` | Token per il recupero password |
 | Catalogo carte | `factions` | Le fazioni, con il titolo e la carta del loro Lord |
@@ -51,6 +52,7 @@
 | Modalità ed effetti | `game_modes` | Le modalità di gioco con i loro valori (punti vita, limite di round) |
 | | `effects` | Il catalogo degli effetti della modalità Effetti |
 | | `card_effects` | Quali effetti ha ogni carta, con il loro valore |
+| Contatti | `contact_messages` | I messaggi inviati dal form della pagina Contatti |
 
 ---
 
@@ -66,6 +68,7 @@ erDiagram
     users ||--o{ password_reset_tokens : "ha"
     users ||--o{ user_cards : "possiede"
     users ||--o{ decks : "crea"
+    users |o--o{ contact_messages : "scrive"
     cards ||--o{ user_cards : "posseduta in"
     decks ||--|{ deck_cards : "contiene"
     cards ||--o{ deck_cards : "usata in"
@@ -85,6 +88,16 @@ erDiagram
         int credits "saldo, mai negativo"
         int rating "rank, parte da 1000"
         boolean is_enabled
+        datetime privacy_accepted_at
+        datetime terms_accepted_at
+    }
+    contact_messages {
+        bigint id PK
+        bigint user_id FK "NULL = visitatore"
+        varchar name
+        varchar email
+        text message
+        varchar status "NEW, READ, ARCHIVED"
     }
     refresh_tokens {
         bigint id PK
@@ -342,6 +355,8 @@ erDiagram
 | **Saldo in `users.credits` + registro in `credit_transactions`** | Il saldo si legge subito senza calcoli. Il registro spiega ogni movimento e serve al marketing per le stime di redditività richieste dal brief. |
 | **Crediti come `INT`**, mai decimali | I crediti sono unità intere. Niente errori di arrotondamento. |
 | **Punteggio di rank già nello schema** (`users.rating`, `matches.*_rating_change`) | Il rank si fa dopo le funzionalità obbligatorie, ma le colonne ci sono già: quando si attiva non serve toccare le tabelle. Finché il rank è spento, `rating` resta 1000 e le variazioni restano `NULL`. Le leghe (Dormiente, Sognatore, Lucido, Dreamweaver) si calcolano dal punteggio, non si salvano. |
+| **Consensi alla registrazione** (`privacy_accepted_at`, `terms_accepted_at`) | La registrazione ha la checkbox di Privacy Policy e Termini di servizio: si salva quando sono stati accettati. Un `CHECK` li rende obbligatori per i giocatori; l'admin, creato all'avvio, non passa dalla registrazione. |
+| **Messaggi dei contatti in tabella** (`contact_messages`) | Il form della pagina Contatti salva il messaggio e l'admin lo legge nel backoffice. Non serve configurare l'invio di email. |
 | **Utenti si disattivano, non si cancellano** (`is_enabled`) | Lo storico di sfide e scambi resta completo. Le chiavi esterne di `trades` e `challenges` verso `users` non hanno `ON DELETE CASCADE` anche per un limite di MySQL: non è permesso su colonne usate in un `CHECK`. |
 
 ### Catalogo delle carte
@@ -374,6 +389,7 @@ erDiagram
 | Scelta | Perché |
 |--------|--------|
 | **Modalità in tabella con i loro valori** (`game_modes`: `starting_life_points`, `round_limit`) | Il brief chiede modalità "separate e attivabili": `is_active` le accende e spegne dal backoffice. Un formato futuro che cambia solo i numeri (es. Construct o Grinder) è una riga nuova. Carte per mazzo e copie restano uguali per tutte le modalità, così un mazzo valido si usa ovunque. |
+| **Carte per mazzo fisse nella configurazione** (`game.deck-size=20`), non in tabella | Cambiarle renderebbe non validi tutti i mazzi salvati. La pagina Configurazione del backoffice le mostra in sola lettura, e la pagina pubblica del Regolamento le legge dalla stessa API. |
 | **Due modalità previste: BASE ed EFFECTS** | BASE viene inserita insieme alla tabella e non si disattiva mai. EFFECTS nasce spenta e si accende quando il motore la supporta. |
 | **Copia dei valori della partita in `matches`** (`starting_life_points`, `round_limit`) | Se i valori di una modalità cambiano, lo storico mostra comunque le regole con cui si è giocato. |
 | **Copie dei mazzi in `matches`** (JSON) | Lo storico resta corretto anche se l'utente modifica o cancella il mazzo, o scambia le carte, dopo la partita. |
@@ -393,6 +409,8 @@ erDiagram
 Queste regole stanno nei **service** del backend, sempre dentro una transazione (`@Transactional`).
 
 ### Registrazione
+
+Prima di tutto controlla che l'utente abbia accettato Privacy Policy e Termini di servizio e salva le due date (`privacy_accepted_at`, `terms_accepted_at`).
 
 Nella stessa transazione che crea l'utente:
 1. Apre il pacchetto **STARTER** (set iniziale: 14 Comuni e 6 Rare estratte dalla pool).
@@ -458,6 +476,12 @@ Quando lo sfidato accetta:
 5. Imposta `status = 'COMPLETED'`.
 
 La simulazione avviene subito, lato server, senza interazione dei giocatori.
+
+### Contatti
+
+- Il form è aperto anche ai visitatori; se chi scrive ha fatto l'accesso si salva anche `user_id`.
+- Il service limita la lunghezza del messaggio (es. 2000 caratteri) e il numero di invii per indirizzo in poco tempo, per evitare lo spam.
+- Quando l'admin apre un messaggio nel backoffice, `status` diventa `READ` e si salva `read_at`.
 
 ---
 
@@ -531,6 +555,7 @@ Nella modalità BASE `effects` è sempre una lista vuota.
 | `V5__create_trades.sql` | `trades`, `trade_items` |
 | `V6__create_game_modes_challenges_and_matches.sql` | `game_modes` (+ righe BASE ed EFFECTS), `challenges`, `matches` |
 | `V7__create_credit_transactions.sql` | `credit_transactions` |
+| `V8__create_contact_messages.sql` | `contact_messages` |
 
 L'ordine conta: ogni file crea tabelle che dipendono solo da quelle dei file precedenti. L'unico riferimento "all'indietro" è `factions.lord_card_id`: la colonna nasce con `factions` e la chiave esterna si aggiunge con un `ALTER TABLE` subito dopo la creazione di `cards`, nello stesso file.
 
@@ -689,7 +714,7 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Autenticazione | Sessioni di Spring Security (`refresh_tokens` si toglie) o JWT (serve `refresh_tokens`) | Sessioni con cookie `HttpOnly` | SWD |
 | Sessioni dopo un riavvio | Solo con le sessioni: in memoria (si perdono a ogni riavvio del server) o su MySQL con Spring Session JDBC (servono le sue tabelle in una migration) | In memoria in fase 1 | SWD |
 | Invio di email | Se il portale invia email (recupero password, verifica dell'account). Senza invio di email `password_reset_tokens` non serve | Solo recupero password, se c'è tempo; altrimenti si toglie la tabella | SWD |
-| Dati e consensi alla registrazione | Quali dati si chiedono (es. data di nascita per l'età minima) e se si registra l'accettazione della Privacy Policy (servirebbe `users.privacy_accepted_at`) | Salvare la data di accettazione della Privacy Policy | DGS + SWD |
+| Dati alla registrazione | Se oltre a username, email e password si chiede altro (es. data di nascita per l'età minima). I consensi a Privacy e Termini sono già decisi | Solo username, email e password | DGS + SWD |
 | Cancellazione dell'account | Lo schema non cancella mai gli utenti, ma la privacy prevede il diritto alla cancellazione | Anonimizzare l'utente (username ed email sostituiti, `is_enabled = FALSE`) invece di cancellarlo | SWD |
 | Creazione del primo admin | Come nasce l'account admin senza scrivere una password nel repository | Creato all'avvio da username e password letti da variabili d'ambiente | SWD |
 
@@ -723,7 +748,37 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Backoffice per catalogo carte e pacchetti | `card_sets`, `cards`, `packs`, `pack_covers`, `pack_slots`, `pack_slot_rarities` (+ `users.role = 'ADMIN'`) |
 | Modalità di gioco separate e attivabili | `game_modes`, `challenges.game_mode_id` |
 | Abilità speciali delle creature (variante facoltativa) | `effects`, `card_effects` |
+| Pagine statiche (contatti, privacy, termini) | `contact_messages`, `users.privacy_accepted_at`, `users.terms_accepted_at` |
 | Acquisto crediti con denaro reale | **Escluso dalla fase 1**: nessuna tabella |
+
+---
+
+## Pagine del portale e tabelle
+
+Collegamento tra la sitemap del portale proposta da WMD (25 ottobre 2026) e le tabelle di questo schema. Il feedback di SWD sulla sitemap è in `docs/riunioni/feedback-sitemap-portale.pdf` (branch `docs/riunione-avvio`). Gli URL sono quelli della sitemap; le API seguono [naming.md](../naming.md) (`/api/v1/`, risorse in inglese al plurale) e l'elenco definitivo sarà in Swagger.
+
+| Pagina | URL | Tabelle |
+|--------|-----|---------|
+| Home, Il gioco / Lore | `/`, `/il-gioco` | `factions` (con Lord), `faction_advantages`, `cards` attive (galleria pubblica) |
+| Regolamento | `/regolamento` | `rarities`, `factions`, `faction_advantages`, `game_modes` + carte per mazzo dalla configurazione |
+| Contatti | `/contatti` | `contact_messages` |
+| Registrazione | `/registrazione` | `users` (con i consensi), `pack_openings` del set iniziale e del benvenuto, `user_cards` |
+| Benvenuto (nuova) | `/benvenuto` | `pack_openings` con `source = 'SIGNUP'`, `pack_opening_cards` |
+| Dashboard | `/dashboard` | `users.credits`, `pack_opening_cards` (ultime carte), `trades` e `challenges` in attesa |
+| Profilo | `/profilo` | `users` |
+| Crediti | `/crediti` | `users.credits`, `credit_transactions` |
+| Negozio | `/negozio` | `packs` (SHOP), `pack_covers`, `pack_slots`, `pack_slot_rarities` |
+| Apertura pacchetto | `/negozio/apertura/{aperturaId}` | `pack_openings`, `pack_opening_cards` |
+| Collezione, Dettaglio carta | `/collezione`, `/collezione/{id}` | `user_cards`, `cards`, `factions`, `rarities`, `faction_advantages`, `card_effects` |
+| Mazzi, Editor mazzo | `/mazzi`, `/mazzi/{id}/modifica` | `decks`, `deck_cards`, `user_cards`, `rarities` (limiti e copie) |
+| Scambi | `/scambi`, `/scambi/nuovo`, `/scambi/{id}` | `trades`, `trade_items`, `user_cards`, `users` (ricerca per username) |
+| Sfide | `/sfide`, `/sfide/nuova`, `/sfide/{id}` | `challenges`, `decks`, `game_modes` attive, `users` |
+| Risultato partita, Storico | `/sfide/{id}/risultato`, `/storico` | `matches` (`round_log`, copie dei mazzi) |
+| Backoffice: statistiche | `/admin` | conteggi su `users`, `cards`, `packs`, `matches`, `credit_transactions` |
+| Backoffice: carte | `/admin/carte` | `cards`, `card_sets`, `card_effects`, `effects` |
+| Backoffice: pacchetti | `/admin/pacchetti` | `packs`, `pack_covers`, `pack_slots`, `pack_slot_rarities` |
+| Backoffice: configurazione | `/admin/configurazione` | `factions`, `faction_advantages`, `rarities`, `game_modes` |
+| Backoffice: messaggi (nuova) | `/admin/messaggi` | `contact_messages` |
 
 ---
 
@@ -746,3 +801,7 @@ Aggiornamento del 25 ottobre 2026, dopo la proposta di regolamento e il set di c
 | Attacco minimo | 0 | 1 |
 | Rank | Non previsto | `users.rating` e `matches.*_rating_change`, usati quando il rank si attiva |
 | DBMS | MySQL 8.0.16+ | MySQL 8.4 LTS |
+| Consensi | Punto aperto | `users.privacy_accepted_at` e `terms_accepted_at`, obbligatori per i giocatori |
+| Contatti | Nessuna tabella | `contact_messages` (migration `V8`), letti dal backoffice |
+| Carte per mazzo | Punto aperto | Fisse nella configurazione (20), in sola lettura nel backoffice |
+| Pagine del portale | — | Nuova sezione che collega ogni pagina della sitemap alle sue tabelle |
