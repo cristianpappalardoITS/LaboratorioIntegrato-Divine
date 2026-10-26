@@ -36,7 +36,7 @@ void calculateDamage_attackerHasFactionAdvantage_addsBonus() { ... }
 void addCard_thirdCopyOfSameCard_throwsException() { ... }
 ```
 
-## Database (MySQL)
+## Database (PostgreSQL)
 
 | Elemento | Convenzione | ✅ Esempio | ❌ Da evitare |
 |----------|-------------|-----------|---------------|
@@ -92,11 +92,13 @@ public class UserCard {
 
 ## Frontend
 
-> 🚧 **Da completare a cura del team WMD** dopo la scelta delle tecnologie.
+Tecnologie: HTML, CSS e JavaScript.
+
+> 🚧 **Da completare a cura del team WMD.**
 >
 > Da indicare, con esempi ✅/❌ come nelle altre sezioni:
 > - Nomi di file e cartelle
-> - Nomi di componenti/pagine (se si usa un framework)
+> - Nomi delle pagine HTML e dei file JavaScript
 > - Nomi di classi CSS (es. BEM o altra convenzione)
 > - Nomi di variabili, funzioni e costanti
 

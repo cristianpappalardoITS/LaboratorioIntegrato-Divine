@@ -17,7 +17,7 @@ Se il personaggio è diverso dall'originale: *"Il personaggio deve essere identi
 ## Messaggio iniziale
 
 ```
-Sei l'illustratore di "Dreams & Nightmares", un gioco di carte collezionabili digitale. Sogni, paure e ricordi diventano creature che vivono nel Dreamscape, un mondo onirico e instabile.
+Sei l'illustratore di "Dreamscape", un gioco di carte collezionabili digitale. Sogni, paure e ricordi diventano creature che vivono nel Dreamscape, un mondo onirico e instabile.
 
 Devi creare le versioni FULL ART delle carte leggendarie. Per ogni carta ti allego l'illustrazione originale del personaggio e ti descrivo una scena nuova.
 

@@ -61,7 +61,7 @@ Il file `.editorconfig` (vedi [template.md](template.md#editorconfig)) applica q
 
 ## Motore di gioco (`engine/`)
 
-- È **Java puro**: nessuna dipendenza da Spring, JPA, MySQL o HTTP. Il backend lo usa, non il contrario.
+- È **Java puro**: nessuna dipendenza da Spring, JPA, PostgreSQL o HTTP. Il backend lo usa, non il contrario.
 - Riceve dati in ingresso (mazzi, carte, configurazione) e restituisce un risultato (vincitore, turni). Non legge né scrive sul database.
 - **Deterministico e testabile:** il mescolamento usa un `Random` passato dall'esterno, così nei test si usa un seed fisso e il risultato è sempre lo stesso.
 - I valori di gioco (punti vita, carte per mazzo, copie massime, bonus di fazione) stanno in **una sola classe di configurazione**, non sparsi nel codice. Sono ancora in discussione e cambieranno.
@@ -146,10 +146,12 @@ public class DeckController {
 
 ## Frontend
 
-> 🚧 **Sezione da completare a cura del team WMD** quando verranno scelte le tecnologie.
+**Tecnologie scelte:** HTML, CSS e JavaScript, senza framework. I dati arrivano dalle API del backend: vedi la [guida ai dati per il frontend](api/guida-frontend.md).
+
+> 🚧 **Da completare a cura del team WMD.**
 >
 > Da indicare:
-> - Tecnologie scelte (framework/librerie, linguaggio, gestione degli stili) e motivazione
+> - Eventuali librerie e gestione degli stili (CSS o SCSS), con la motivazione
 > - Struttura delle cartelle in `frontend/`
 > - Come avviare il frontend in locale e come si collega al backend
 > - Regole di codice specifiche (componenti, stili, gestione delle chiamate alle API)
@@ -160,7 +162,7 @@ public class DeckController {
 Regole che valgono comunque, qualunque tecnologia si scelga:
 
 - Le statistiche delle carte (ATT, DIF, fazione, rarità) devono essere **leggibili anche su mobile**.
-- Le chiamate alle API passano da un unico punto, non sparse nelle pagine.
+- Le chiamate alle API passano da un unico punto (es. un file `api.js`), non sparse nelle pagine: lì si aggiunge anche il token di accesso.
 - Il frontend non decide mai l'esito di una partita né il contenuto di un pacchetto: mostra solo quello che restituisce il server.
 
 ## Sicurezza e file da non caricare

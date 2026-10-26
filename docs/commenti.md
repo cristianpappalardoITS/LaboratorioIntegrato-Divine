@@ -53,7 +53,7 @@ Javadoc di classe:
 
 ```java
 /**
- * Simula una partita completa tra due mazzi e ne restituisce l'esito turno per turno.
+ * Simula una partita completa tra due mazzi e ne restituisce l'esito round per round.
  *
  * <p>La classe non accede al database: riceve i mazzi già caricati e un
  * {@link java.util.Random} esterno, così la stessa partita è riproducibile nei test.

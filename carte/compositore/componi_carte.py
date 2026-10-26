@@ -1,4 +1,4 @@
-"""Compone le carte di Dreams & Nightmares.
+"""Compone le carte di Dreamscape.
 
 Per ogni riga del file dati prende la cornice della rarità, l'illustrazione
 della carta e scrive nome, simbolo di fazione, descrizione, effetto, attacco
@@ -865,7 +865,7 @@ def leggi_dati(percorso):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compone le carte di Dreams & Nightmares.")
+    parser = argparse.ArgumentParser(description="Compone le carte di Dreamscape.")
     parser.add_argument("--dati", default=os.path.join(CARTELLA, "carte.csv"), help="file CSV con i dati delle carte")
     parser.add_argument("--cornici", default=os.path.join(CARTELLA, "..", "cornici"), help="cartella delle cornici")
     parser.add_argument("--illustrazioni", default=os.path.join(CARTELLA, "..", "illustrazioni"), help="cartella delle illustrazioni")

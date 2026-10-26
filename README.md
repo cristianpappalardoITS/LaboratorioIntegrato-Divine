@@ -1,10 +1,11 @@
-# LaboratorioIntegrato-Divine
+# Dreamscape
 
-Progetto Laboratorio Integrato · Gruppo 5
+Progetto Laboratorio Integrato · Gruppo 5 · **Somnia**
 
-Gioco di carte collezionabili digitale (TCG). Gli utenti si registrano, ricevono crediti virtuali, comprano pacchetti di carte casuali, gestiscono la collezione e i mazzi, scambiano carte con altri utenti e si sfidano in battaglie simulate dal server, con risultato turno per turno e storico delle partite.
+**Dreamscape** è un gioco di carte collezionabili digitale (TCG) a tema sogni. I giocatori sono i **Dreamweaver**: si registrano, ricevono crediti virtuali e un set di carte iniziale, comprano pacchetti di carte casuali, gestiscono la collezione e i mazzi, scambiano carte con i propri amici e si sfidano in partite simulate dal server, con risultato round per round e storico delle partite.
 
-> **Stato del concept:** il tema non è ancora definitivo. Le proposte sono **Divine** (mitologia) e **Dreams & Nightmares** (sogni, incubi, ricordi).
+- **Repository:** [cristianpappalardoITS/gruppo-05-dreamscape](https://github.com/cristianpappalardoITS/gruppo-05-dreamscape)
+- **Tema:** i sogni. Tre fazioni: **Dreams**, **Nightmares** e **Memories**, ognuna con il suo Lord.
 
 ## Team
 
@@ -14,16 +15,27 @@ Gioco di carte collezionabili digitale (TCG). Gli utenti si registrano, ricevono
 | **WMD** · Web Developer | Gaia (TL), Alessandro, Daniele, Yuri | Sitemap, UX/UI, wireframe, frontend |
 | **DGS** · Digital Strategist | Sara (TL), Valerio, Maie | Concept, lore, economia di gioco, marketing |
 
+> 🚧 Il brief chiede lo username GitHub di ogni studente (`@username`): va aggiunto qui per tutti i membri.
+
 Le decisioni finali dei task comuni (COM-xx) vanno comunicate a **Marco** o **Cristian**, che le registrano in `docs/decisioni/`.
+
+## Il gioco in breve
+
+- **Una sola modalità**, la Base, che comprende gli effetti delle carte (il brief aggiornato permette di modificare la modalità Base).
+- Mazzi da 20 carte, al massimo 2 copie per carta (1 per le Leggendarie), limiti per rarità.
+- Fazioni con vantaggi reciproci, scontro contemporaneo, partita simulata dal server.
+- **Lista amici**: si scambia solo con i propri amici, in quantità e rarità libere (es. 1 Epica per 5 Comuni), sempre solo se l'altro accetta.
+
+I dettagli sono nella [proposta di regolamento](docs/proposte/proposta-regolamento-dreamscape.pdf).
 
 ## Stack
 
 | Livello | Tecnologia |
 |---------|------------|
 | Motore di gioco | Java, modulo isolato, test **JUnit** |
-| Backend / portale | Java + **Spring Boot**, Spring Data **JPA** |
-| Database | **MySQL** |
-| Frontend | 🚧 **Da definire** (scelta del team WMD) |
+| Backend / portale | Java + **Spring Boot**, Spring Data **JPA**, accesso con token **JWT** |
+| Database | **PostgreSQL**, migration con **Flyway** |
+| Frontend | **HTML, CSS e JavaScript** |
 | Gestione progetto | **GitHub Projects** |
 
 Il pagamento con denaro reale non fa parte della fase 1: i crediti sono solo virtuali.
@@ -41,12 +53,12 @@ Il pagamento con denaro reale non fa parte della fase 1: i crediti sono solo vir
 ## Struttura del repository
 
 ```
-LaboratorioIntegrato-Divine/
+gruppo-05-dreamscape/
 ├── engine/      # Motore di gioco Java + test JUnit
 ├── backend/     # Applicazione Spring Boot (portale + API REST)
-├── frontend/    # Frontend (tecnologie da definire)
+├── frontend/    # Frontend in HTML, CSS e JavaScript
 ├── database/    # Script SQL, migrazioni, dati di prova
-├── carte/       # Set di carte di prova: cornici, illustrazioni, carte finite, script
+├── carte/       # Set di carte di prova: cornici, illustrazioni, carte finite, script, effetti
 ├── docs/        # Documentazione e linee guida
 └── .github/     # Template di issue e pull request
 ```
@@ -63,5 +75,7 @@ Le linee guida del progetto sono in [`docs/`](docs/README.md):
 - [Template](docs/template.md)
 - [Checklist prima di aprire una pull request](docs/checklist-pr.md)
 - [Proposta di schema del database](docs/database/schema.md) (da verificare)
+- [Proposta di regolamento](docs/proposte/proposta-regolamento-dreamscape.pdf) (da discutere)
+- [Guida ai dati per il frontend](docs/api/guida-frontend.md): quali dati arrivano dal backend, pagina per pagina
 
-Set di carte di prova: [carte/](carte/README.md), con la [presentazione per il team](carte/presentazione-set-carte.pdf).
+Set di carte di prova: [carte/](carte/README.md), con la [presentazione per il team](carte/presentazione-set-carte.pdf) e la [lista degli effetti proposta da Nicolas](carte/effetti/Effetti%20Keyword%20Descrizioni.txt).
