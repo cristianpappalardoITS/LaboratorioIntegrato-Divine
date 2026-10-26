@@ -1,0 +1,15 @@
+# File di sistema
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
+
+# Variabili d'ambiente e credenziali
+.env
+application-local.properties

@@ -19,6 +19,12 @@ Linee guida e documentazione dettagliata. Per la panoramica del progetto vedi il
 | Documento | Contenuto |
 |-----------|-----------|
 | [Proposta di regolamento](proposte/proposta-regolamento-dreams-nightmares.pdf) (PDF) | Modalità Base ed Effetti, mazzo, rarità, rank, con esempi a tema Dreams & Nightmares e motivazioni delle modifiche |
+## Materiale del gioco
+
+| Documento | Contenuto |
+|-----------|-----------|
+| [Set di carte di prova](../carte/README.md) | 12 carte e 3 full art, cornici, illustrazioni, script che compone le carte |
+| [Presentazione del set di carte](../carte/presentazione-set-carte.pdf) (PDF) | Scelte visive, come sono fatte le carte, tutte le carte create |
 
 ## Altre cartelle
 
