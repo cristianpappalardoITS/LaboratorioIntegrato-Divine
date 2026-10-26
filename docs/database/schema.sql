@@ -151,12 +151,15 @@ CREATE TABLE card_sets (
 -- non si cancella: si disattiva con is_active = FALSE.
 -- code è un identificativo stabile (es. BASE-001): resta uguale anche se il nome
 -- cambia, si usa nelle migration con i dati e per il nome dei file immagine.
--- Si salva l'immagine della carta finita (cornice, illustrazione, nome, statistiche
--- e testi), prodotta con il compositore delle carte (carte/compositore): il frontend
--- la mostra così com'è.
--- image_url: carta normale. full_art_image_url: versione full art (solo Leggendarie,
--- controllato dal service). La full art è la stessa carta: cambia solo l'immagine.
--- ATT, DIF e testi sono stampati sull'immagine: se cambiano, l'immagine va ricomposta.
+-- La carta la monta il frontend con un componente JavaScript: illustrazione, cornice
+-- della fazione e della rarità, simbolo, nome, testi, ATT e DIF. Qui si salvano solo
+-- l'illustrazione e il suo ritaglio; cornici e simboli sono file del frontend.
+-- illustration_url: illustrazione orizzontale 3:2 della carta normale.
+-- full_art_illustration_url: illustrazione verticale 2:3 della versione full art
+-- (solo Leggendarie, controllato dal service). La full art è la stessa carta.
+-- *_focus_y: ritaglio verticale dell'illustrazione, da 0 (in alto) a 1 (in basso),
+-- come la colonna centro_y del compositore (es. Il Sogno Lucido 0.27).
+-- Le illustrazioni restano PNG originali, con i loro metadati.
 -- attack >= 1: con attacco almeno 1 la partita Base finisce sempre (regolamento 14.3).
 CREATE TABLE cards (
     id               BIGINT       NOT NULL AUTO_INCREMENT,
@@ -168,8 +171,10 @@ CREATE TABLE cards (
     faction_id       BIGINT       NOT NULL,
     rarity_id        BIGINT       NOT NULL,
     card_set_id      BIGINT       NOT NULL,
-    image_url          VARCHAR(500) NULL,
-    full_art_image_url VARCHAR(500) NULL,
+    illustration_url          VARCHAR(500) NULL,
+    illustration_focus_y      DECIMAL(3,2) NOT NULL DEFAULT 0.40,
+    full_art_illustration_url VARCHAR(500) NULL,
+    full_art_focus_y          DECIMAL(3,2) NOT NULL DEFAULT 0.40,
     is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -180,7 +185,8 @@ CREATE TABLE cards (
     CONSTRAINT fk_cards_rarity FOREIGN KEY (rarity_id) REFERENCES rarities (id),
     CONSTRAINT fk_cards_card_set FOREIGN KEY (card_set_id) REFERENCES card_sets (id),
     CONSTRAINT chk_cards_attack CHECK (attack >= 1),
-    CONSTRAINT chk_cards_defense CHECK (defense >= 1)
+    CONSTRAINT chk_cards_defense CHECK (defense >= 1),
+    CONSTRAINT chk_cards_focus CHECK (illustration_focus_y BETWEEN 0 AND 1 AND full_art_focus_y BETWEEN 0 AND 1)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 -- Ora che cards esiste, si collega il Lord di ogni fazione alla sua carta.

@@ -34,7 +34,7 @@
 | | `faction_advantages` | Chi è forte contro chi e con che bonus |
 | | `rarities` | I TIER di rarità, con il limite per mazzo e le copie massime |
 | | `card_sets` | Le espansioni: set base, espansione 1... |
-| | `cards` | Le carte-creatura con codice, ATT, DIF, fazione, rarità, espansione, immagini della carta finita |
+| | `cards` | Le carte-creatura con codice, ATT, DIF, fazione, rarità, espansione, illustrazioni e ritaglio |
 | Collezione e mazzi | `user_cards` | Le carte possedute da ogni utente, con il numero di copie (e quante full art) |
 | | `decks` | I mazzi degli utenti |
 | | `deck_cards` | Le carte di ogni mazzo |
@@ -150,8 +150,10 @@ erDiagram
         bigint faction_id FK
         bigint rarity_id FK
         bigint card_set_id FK
-        varchar image_url "carta finita"
-        varchar full_art_image_url "solo Leggendarie"
+        varchar illustration_url "3:2"
+        decimal illustration_focus_y "ritaglio"
+        varchar full_art_illustration_url "2:3, solo Leggendarie"
+        decimal full_art_focus_y
         boolean is_active
     }
     user_cards {
@@ -367,8 +369,9 @@ erDiagram
 | **Lord di fazione** (`factions.lord_title`, `factions.lord_card_id`) | Ogni fazione è rappresentata da una sua Leggendaria: Dreams Lord, Nightmares Lord, Memories Lord. Sono solo titolo e immagine (pagina della fazione, copertine dei pacchetti), senza regole di gioco in più. |
 | **Limiti per TIER in `rarities`**: `max_per_deck` e `max_copies` | Il regolamento ha limiti per rarità (Leggendarie 2, Epiche 4, Rare 8, Comuni libere) e copie che dipendono dalla rarità (2, ma 1 per le Leggendarie). Stando in tabella si ribilanciano senza toccare il codice. |
 | **Codice stabile per ogni carta** (`cards.code`, es. `BASE-001`) | Le migration con i dati e i nomi dei file immagine usano il codice, che non cambia se si corregge il nome della carta. |
-| **Si salva la carta finita** (`image_url`, `full_art_image_url`) | Le carte sono immagini già pronte: illustrazione dal generatore di immagini, poi cornice, nome, statistiche e testi aggiunti dal compositore (`carte/compositore`). Il frontend le mostra così come sono. Le 12 carte e le 3 full art del set di prova sono già in questo formato e possono diventare le prime carte del catalogo. |
-| **`carte.csv` è la fonte unica del catalogo** | ATT, DIF e testi sono stampati sull'immagine, quindi devono coincidere con il database. Se cambia una carta: si modifica `carte.csv`, il compositore ricompone l'immagine e si scrive la migration con i nuovi valori. Così immagine e dati cambiano insieme. |
+| **La carta la monta il frontend** con un componente JavaScript (es. componente React `Carta`) | Il componente riceve i dati della carta e l'illustrazione e monta: illustrazione con il suo ritaglio, cornice della fazione e della rarità con la finestra trasparente, simbolo, nome, testi, ATT e DIF. Se cambia una statistica o un testo, la carta si aggiorna da sola: nessuna immagine da ricomporre. Le 15 carte del set di prova sono il riferimento visivo. |
+| **Nel database solo illustrazione e ritaglio** (`illustration_url`, `illustration_focus_y`, `full_art_illustration_url`, `full_art_focus_y`) | L'illustrazione è l'unica parte diversa per ogni carta. Cornici, simboli, coordinate delle zone e font sono uguali per tutte e stanno nel frontend. Il ritaglio è lo stesso del compositore: niente zoom, solo spostamento verticale. |
+| **Illustrazioni servite dal backend** | Quelle del catalogo ufficiale stanno nel repository, quelle caricate dal backoffice in un volume Docker. Restano PNG originali, senza conversioni, così i loro metadati non si perdono. |
 | **Full art come copia rara della stessa carta** (`user_cards.full_art_quantity`) | Solo le Leggendarie hanno la full art. Quando esce una Leggendaria da un pacchetto c'è una piccola probabilità (`packs.full_art_chance`, es. 5%) che sia full art. In partita è la stessa carta: stesse statistiche, conta per gli stessi limiti di copie. Cambia solo l'immagine, in collezione e negli scambi. |
 | **Attacco e difesa almeno 1** (`CHECK`) | Con attacco almeno 1 ogni round toglie difesa e la partita Base finisce sempre da sola (regolamento, punto 14.3). |
 | **Espansioni** (`card_sets`) con pacchetti legati a un'espansione (`packs.card_set_id`) | Permette pacchetti che contengono solo le carte nuove. Con `card_set_id = NULL` il pacchetto pesca da tutte le espansioni. |
@@ -451,8 +454,8 @@ Dal backoffice un pacchetto si può attivare solo se, per ogni rarità usata nei
 
 ### Catalogo
 
-- `full_art_image_url` si può impostare solo su carte Leggendarie.
-- Se dal backoffice cambiano ATT, DIF, nome o testi di una carta, va caricata anche l'immagine ricomposta: il form non salva le nuove statistiche senza la nuova immagine.
+- `full_art_illustration_url` si può impostare solo su carte Leggendarie.
+- Le illustrazioni caricate dal backoffice si salvano così come sono (PNG), senza conversioni che toglierebbero i metadati.
 - `factions.lord_card_id` deve essere una Leggendaria della stessa fazione.
 - Una carta ha al massimo un effetto, come prevede il regolamento attuale.
 
@@ -606,7 +609,8 @@ Flyway esegue le migration in ordine di numero. Una migration già eseguita **no
 ### Convenzioni del catalogo
 
 - **Codice carta:** `<codice espansione>-<numero a 3 cifre>`, es. `BASE-001`, `EXP1-012`.
-- **Immagini:** la carta finita ha il nome del codice in minuscolo, es. `base-004.webp`, e la full art `base-004-fullart.webp`. Si ottengono dalle carte prodotte dal compositore (`carte/carte-finali`). Le immagini del catalogo ufficiale stanno nel repository; quelle caricate dal backoffice nel volume dei file caricati.
+- **Illustrazioni:** il file ha il nome del codice in minuscolo, es. `base-004.png`, e la full art `base-004-fullart.png`, come nella cartella `carte/illustrazioni`. Restano PNG originali, con i loro metadati. Quelle del catalogo ufficiale stanno nel repository; quelle caricate dal backoffice nel volume dei file caricati.
+- **Cornici e simboli:** file statici del frontend, uno per fazione e rarità, con la finestra trasparente e le coordinate delle zone (nome, simbolo, testi, ATT, DIF).
 - **Riferimenti tra tabelle nelle migration:** sempre tramite `code` (fazione, rarità, espansione, carta), mai tramite `id` scritti a mano.
 - **Il catalogo ufficiale cambia solo con le migration.** Se si crea dal backoffice una carta che poi viene inserita anche da una migration, Flyway fallisce sul codice duplicato.
 
@@ -650,7 +654,7 @@ UPDATE factions f JOIN cards c ON c.code = 'BASE-012' SET f.lord_card_id = c.id 
 INSERT INTO packs (name, pack_type, price_credits) VALUES ('Pacchetto base', 'SHOP', 100);
 
 INSERT INTO pack_covers (pack_id, faction_id, name, image_url, sort_order)
-SELECT p.id, f.id, f.lord_title, CONCAT('/images/packs/base-', LOWER(f.code), '.webp'), f.id
+SELECT p.id, f.id, f.lord_title, CONCAT('/images/packs/base-', LOWER(f.code), '.png'), f.id
 FROM packs p, factions f
 WHERE p.name = 'Pacchetto base';
 
@@ -701,7 +705,7 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Pacchetti non aperti | Il pacchetto si apre subito all'acquisto, oppure l'utente può tenerlo e aprirlo dopo (servirebbe un inventario dei pacchetti) | Apertura immediata | DGS + WMD |
 | Punti vita e limite di round | Valori di `game_modes` dopo le simulazioni del motore: con 20 punti vita quasi tutte le partite finiscono a mazzo esaurito (regolamento 14.1 e 14.2) | 20 punti vita e 60 round finché non si decide | Maie + Nicolas |
 | Regole del rank | Quante partite al giorno contro lo stesso avversario contano, quanto vale ogni partita (fattore K dell'Elo), premio in crediti | Prime 3 partite del giorno, K = 32 | Nicolas + Maie |
-| Modifica di carte già distribuite | Se l'admin può cambiare ATT/DIF di una carta che gli utenti già possiedono. Lo storico è protetto dalle copie dei mazzi in `matches`, ma l'immagine va ricomposta e i mazzi esistenti potrebbero diventare non validi | Permessa, sempre con l'immagine ricomposta e con ricontrollo dei mazzi alla sfida | Tutti |
+| Modifica di carte già distribuite | Se l'admin può cambiare ATT/DIF di una carta che gli utenti già possiedono. Lo storico è protetto dalle copie dei mazzi in `matches` e la carta si rimonta da sola, ma i mazzi esistenti potrebbero diventare non validi | Permessa, con ricontrollo dei mazzi alla sfida | Tutti |
 | Mazzi non validi | Si possono salvare come bozza (servirebbe `decks.is_valid`) o si salvano solo i mazzi validi? | Solo mazzi validi; un mazzo che lo diventa dopo uno scambio viene segnalato alla sfida | SWD + WMD |
 | Carte impegnate in scambi in attesa | Se una carta offerta in uno scambio in attesa resta usabile (in altri scambi e nei mazzi) o viene bloccata finché lo scambio non si chiude | Non bloccata: tutto si ricontrolla quando lo scambio viene accettato | SWD |
 | Scadenza di scambi e sfide | Se una proposta in attesa scade dopo un certo tempo (servirebbe uno stato `EXPIRED`) | Nessuna scadenza in fase 1; chi propone può annullare | Tutti |
@@ -724,7 +728,9 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 
 | Punto | Da decidere | Proposta | Chi |
 |-------|-------------|----------|-----|
-| Caricamento delle immagini | Dove vanno le carte e le copertine caricate dal backoffice | Cartella del server (volume Docker); nel database solo il percorso | SWD + WMD |
+| Caricamento delle immagini | Dove vanno illustrazioni e copertine caricate dal backoffice | Volume Docker del backend (deciso); nel database solo il percorso | SWD |
+| Montaggio nel componente | Il componente della carta disegna su canvas oppure sovrappone livelli HTML/CSS | Canvas: stesso risultato delle carte di prova | WMD |
+| Ruolo del compositore Python | Se prepara cornici con finestra trasparente e coordinate delle zone per il frontend (e anteprime), oppure se tutto passa in JavaScript | Da scegliere | SWD + WMD |
 | Fuso orario delle date | In che fuso si salvano le date. Conta per la ricompensa giornaliera e per le partite del giorno che contano per il rank | Tutto in UTC nel database, conversione nel frontend | SWD |
 | Database per i test | Con cosa si testano repository e service: H2 in memoria o MySQL vero (Testcontainers o database di test). H2 non supporta bene colonne `JSON` e alcuni `CHECK` | MySQL vero per i test di integrazione; il motore di gioco si testa senza database | SWD |
 
@@ -790,7 +796,7 @@ Aggiornamento del 25 ottobre 2026, dopo la proposta di regolamento e il set di c
 | Cosa | Prima | Ora |
 |------|-------|-----|
 | Rarità | Limite per mazzo | Limite per mazzo e copie massime per rarità (`max_copies`), 4 TIER fino a LEGENDARY |
-| Immagini delle carte | `image_url` | `image_url` (carta finita dal compositore) + `full_art_image_url` per le Leggendarie |
+| Immagini delle carte | `image_url` (immagine unica) | Illustrazione e ritaglio (`illustration_url`, `illustration_focus_y`, `full_art_illustration_url`, `full_art_focus_y`): la carta la monta il componente JavaScript del frontend |
 | Full art | Non prevista | Copia rara della stessa carta (`full_art_quantity`, `is_full_art`, `full_art_chance`) |
 | Lord di fazione | Non previsti | `factions.lord_title` e `lord_card_id`; copertine dei pacchetti in `pack_covers` |
 | Pacchetti | Solo in vendita, slot fissi per TIER | Tipi SHOP/STARTER/WELCOME, slot con rarità pesate (`pack_slot_rarities`), origine dell'apertura (`source`) |
