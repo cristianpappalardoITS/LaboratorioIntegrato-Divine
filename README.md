@@ -46,6 +46,7 @@ LaboratorioIntegrato-Divine/
 ├── backend/     # Applicazione Spring Boot (portale + API REST)
 ├── frontend/    # Frontend (tecnologie da definire)
 ├── database/    # Script SQL, migrazioni, dati di prova
+├── carte/       # Set di carte di prova: cornici, illustrazioni, carte finite, script
 ├── docs/        # Documentazione e linee guida
 └── .github/     # Template di issue e pull request
 ```
@@ -61,3 +62,5 @@ Le linee guida del progetto sono in [`docs/`](docs/README.md):
 - [Documentazione](docs/documentazione.md): cosa documentare e dove
 - [Template](docs/template.md)
 - [Checklist prima di aprire una pull request](docs/checklist-pr.md)
+
+Set di carte di prova: [carte/](carte/README.md), con la [presentazione per il team](carte/presentazione-set-carte.pdf).
