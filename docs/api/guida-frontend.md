@@ -43,7 +43,7 @@ Per il team **WMD**. Spiega quali dati arrivano dal backend, come chiederli e co
 | Formato | JSON in entrata e in uscita, nomi in `camelCase` | `{ "totalCards": 20, "isFullArt": false }` |
 | Risorse | In inglese, al plurale, il verbo è il metodo HTTP | `GET /decks`, `POST /decks`, `DELETE /decks/{deckId}` |
 | Date | Testo ISO 8601 in UTC: va convertito nell'ora locale per mostrarlo | `"2026-10-26T14:30:00Z"` |
-| Immagini | URL relativi al backend: si mettono così come sono in `src` o si usano nel disegno della carta | `"/images/cards/base-004.png"` |
+| Immagini | URL relativi al backend, in WebP: si mettono così come sono in `src` o si usano nel disegno della carta. Il browser le tiene in cache (vedi [capitolo 7](#7-come-si-monta-una-carta)) | `"/images/cards/base-004-v1.webp"` |
 | Liste lunghe | Con paginazione: `page` (da 0) e `size` | `GET /me/cards?page=0&size=24` |
 
 Una lista paginata arriva così:
@@ -224,16 +224,20 @@ Questi oggetti tornano in più pagine: conviene scrivere una sola funzione JavaS
     "value": null,
     "text": "Questa carta non subisce il vantaggio di fazione dell'avversario."
   },
-  "illustrationUrl": "/images/cards/base-004.png",
+  "illustrationUrl": "/images/cards/base-004-v1.webp",
+  "illustrationThumbUrl": "/images/cards/base-004-v1-thumb.webp",
   "illustrationFocusY": 0.27,
-  "fullArtIllustrationUrl": "/images/cards/base-004-fullart.png",
+  "fullArtIllustrationUrl": "/images/cards/base-004-fullart-v1.webp",
+  "fullArtThumbUrl": "/images/cards/base-004-fullart-v1-thumb.webp",
   "fullArtFocusY": 0.40,
   "lordTitle": "Dreams Lord"
 }
 ```
 
 - `effect` è `null` se la carta non ha effetti; `value` è il numero X dell'effetto (es. `Protezione 1`), `null` se l'effetto non ha numero.
-- `fullArtIllustrationUrl` c'è solo per le Leggendarie.
+- `illustrationUrl` è la copia **grande** (larghezza 1024 px), `illustrationThumbUrl` la **miniatura** (larghezza 400 px): quale usare è spiegato nel [capitolo 7](#7-come-si-monta-una-carta).
+- `illustrationFocusY` e `fullArtFocusY` dicono quale fascia dell'immagine resta visibile nel ritaglio: 0 = in alto, 1 = in basso (quasi sempre 0,40).
+- `fullArtIllustrationUrl` e `fullArtThumbUrl` ci sono solo per le Leggendarie.
 - `lordTitle` c'è solo per le tre carte Lord.
 - Codici delle rarità: `COMMON`, `RARE`, `EPIC`, `LEGENDARY`. Codici delle fazioni: `DREAMS`, `NIGHTMARES`, `MEMORIES`.
 
@@ -374,9 +378,9 @@ Tipi possibili: `SIGNUP_BONUS`, `DAILY_REWARD`, `PACK_PURCHASE`, `MATCH_REWARD`,
     "priceCredits": 100,
     "fullArtChance": 5.0,
     "covers": [
-      { "id": "019a1f31-0000-7000-8000-0000000000c1", "name": "Dreams Lord", "factionCode": "DREAMS", "imageUrl": "/images/packs/base-dreams.png" },
-      { "id": "019a1f31-0000-7000-8000-0000000000c2", "name": "Nightmares Lord", "factionCode": "NIGHTMARES", "imageUrl": "/images/packs/base-nightmares.png" },
-      { "id": "019a1f31-0000-7000-8000-0000000000c3", "name": "Memories Lord", "factionCode": "MEMORIES", "imageUrl": "/images/packs/base-memories.png" }
+      { "id": "019a1f31-0000-7000-8000-0000000000c1", "name": "Dreams Lord", "factionCode": "DREAMS", "imageUrl": "/images/packs/base-dreams-v1.webp" },
+      { "id": "019a1f31-0000-7000-8000-0000000000c2", "name": "Nightmares Lord", "factionCode": "NIGHTMARES", "imageUrl": "/images/packs/base-nightmares-v1.webp" },
+      { "id": "019a1f31-0000-7000-8000-0000000000c3", "name": "Memories Lord", "factionCode": "MEMORIES", "imageUrl": "/images/packs/base-memories-v1.webp" }
     ],
     "slots": [
       { "cardCount": 3, "rarities": [ { "code": "COMMON", "chance": 100.0 } ] },
@@ -547,7 +551,7 @@ La partita la gioca il server appena la sfida è accettata: non c'è niente da a
 |--------|----------|------|
 | Dashboard admin | `GET /admin/stats` | Numeri di utenti, carte, pacchetti, partite |
 | Carte | `GET/POST /admin/cards`, `PUT /admin/cards/{cardId}` | Campi: codice, nome, descrizione, ATT, DIF, fazione, rarità, espansione, effetto e valore, illustrazione 3:2 e ritaglio, full art 2:3 e ritaglio (solo Leggendarie), attiva |
-| Caricamento illustrazioni | `POST /admin/images` (form `multipart/form-data`) → `{ "url": "/images/cards/base-013.png" }` | File PNG, caricati così come sono |
+| Caricamento illustrazioni | `POST /admin/images` (form `multipart/form-data` con il file, il codice della carta e il tipo: illustrazione, full art o copertina) → `{ "url": "/images/cards/base-013-v1.webp", "thumbUrl": "/images/cards/base-013-v1-thumb.webp" }` | Si carica il PNG originale: il backend lo conserva intatto e crea da solo le copie WebP. Una nuova immagine per la stessa carta diventa `-v2`. Le copertine hanno solo `url` |
 | Pacchetti | `GET/POST /admin/packs`, `PUT /admin/packs/{packId}` | Tipo (negozio, set iniziale, benvenuto), prezzo, slot con rarità e probabilità (per ogni slot sommano a 100), copertine, probabilità full art, attivo |
 | Configurazione | `GET/PUT /admin/factions`, `/admin/rarities`, `/admin/game-modes` | Vantaggi e Lord delle fazioni, limiti delle rarità, punti vita e limite di round. Le carte per mazzo (20) sono in sola lettura |
 | Messaggi | `GET /admin/contact-messages`, `PUT /admin/contact-messages/{messageId}` | Messaggi del form Contatti: letto, archiviato |
@@ -564,13 +568,13 @@ Ingredienti:
 
 | Ingrediente | Da dove arriva |
 |-------------|----------------|
-| Illustrazione (`illustrationUrl`) e ritaglio verticale (`illustrationFocusY`, da 0 = in alto a 1 = in basso) | Backend, per ogni carta |
-| Cornice della fazione e della rarità, con la finestra trasparente | File del frontend: 12 cornici (3 fazioni × 4 rarità) |
+| Illustrazione (`illustrationUrl` o `illustrationThumbUrl`) e ritaglio verticale (`illustrationFocusY`, da 0 = in alto a 1 = in basso) | Backend, per ogni carta |
+| Cornice della fazione e della rarità, con la finestra trasparente | File del frontend: 12 cornici (3 fazioni × 4 rarità), anche queste in WebP grande e miniatura |
 | Simbolo della fazione: luna (Dreams), occhio (Nightmares), clessidra (Memories) | File del frontend |
 | Coordinate di nome, simbolo, testi, ATT e DIF sulla cornice | File del frontend (es. `zone.json`) |
 | Nome, descrizione, effetto, ATT, DIF | Backend, per ogni carta |
 
-Ordine di disegno (es. su un `<canvas>` di 1024 × 1536, poi ridotto con il CSS):
+Ordine di disegno (es. su un `<canvas>` di 1024 × 1536 con le copie grandi, o di 400 × 600 con le miniature, poi adattato con il CSS):
 
 1. Illustrazione, ritagliata in verticale con `illustrationFocusY`, senza zoom.
 2. Cornice sopra (la finestra trasparente lascia vedere l'illustrazione).
@@ -578,6 +582,44 @@ Ordine di disegno (es. su un `<canvas>` di 1024 × 1536, poi ridotto con il CSS)
 4. Full art: l'illustrazione copre tutta la carta e i testi stanno su pannelli scuri semitrasparenti.
 
 Il riferimento visivo sono le 15 carte del set di prova in `carte/carte-finali/`. Come preparare cornici trasparenti e coordinate (compositore Python o tutto in JavaScript) è ancora da decidere con SWD. Per l'accessibilità, ogni carta ha un testo alternativo con nome, fazione, rarità, attacco e difesa.
+
+### Il ritaglio
+
+L'immagine si adatta alla finestra della cornice senza deformarsi e senza zoom; quello che avanza si taglia. `illustrationFocusY` dice quanto tagliare sopra e quanto sotto. Esempio: avanzano 400 px in altezza e il focus è 0,40, quindi si tagliano 160 px sopra e 240 px sotto.
+
+Con livelli HTML/CSS:
+
+```js
+img.style.objectFit = "cover";
+img.style.objectPosition = `50% ${carta.illustrationFocusY * 100}%`;
+```
+
+Con il canvas: `sy = (altezzaScalata - altezzaFinestra) * illustrationFocusY`.
+
+### Grande o miniatura
+
+| Dove | Copia | Peso indicativo |
+|------|-------|-----------------|
+| Griglie e liste: collezione, editor del mazzo, scambi, dashboard, campo di partita | **Miniatura** (`illustrationThumbUrl`, cornice piccola) | 25–80 KB l'illustrazione, 20–35 KB la cornice |
+| Carta da sola in grande: dettaglio carta, apertura del pacchetto, Lord nella pagina della fazione | **Grande** (`illustrationUrl`, cornice grande) | 120–350 KB l'illustrazione, 75–140 KB la cornice |
+
+Con le miniature la prima visita alla collezione pesa meno di 1 MB. Con i PNG originali sarebbero circa 55 MB.
+
+Le coordinate delle zone (es. `zone.json`) si scrivono una volta per la carta grande (1024 × 1536). Per la miniatura si moltiplicano per 400 / 1024.
+
+### Cache: cosa resta nel browser
+
+| Cosa | Resta in cache? | Perché |
+|------|-----------------|--------|
+| Illustrazioni e copertine (`/images/...`) | **Sì, per sempre** | Il backend le manda con `Cache-Control: public, max-age=31536000, immutable`. Se un'immagine cambia, il nome cambia (`-v1` → `-v2`), quindi non si vede mai una versione vecchia |
+| Cornici, simboli e font del frontend | **Sì**, se anche voi mettete la versione nel nome (es. `cornice-dreams-comune-v1.webp`) e configurate lo stesso `Cache-Control` | Stesso motivo |
+| Pagine HTML, `api.js`, CSS | Per poco, o con controllo a ogni visita | Così un aggiornamento del sito arriva subito |
+| Risposte delle API (JSON) | **No** | Contengono dati personali e cambiano spesso. Spring Security manda già `no-store` |
+| Carta montata | **No, non serve** | Montarla costa pochi millisecondi. A ogni pagina si rimonta con le immagini già in cache, ed è sempre aggiornata se cambiano statistiche o testi |
+
+In una prima sessione di un nuovo utente si montano circa 150–200 carte: benvenuto ~30, collezione ~30, editor del mazzo ~50, un pacchetto 5, una partita fino a 40. In tutto meno di un secondo. Ogni immagine si scarica solo la prima volta.
+
+Un consiglio: se nella stessa pagina la stessa carta compare più volte (es. due copie nel mazzo), si può montarla una volta e copiarla (`cloneNode(true)` con i livelli HTML, `drawImage` da un canvas già pronto).
 
 ---
 
@@ -601,6 +643,7 @@ Rispetto alla prima sitemap: nuove **Benvenuto**, **Amici**, **Nuova password** 
 - **Il server decide**: estrazione dei pacchetti, esito delle partite, validità dei mazzi, scambi. Il frontend non calcola niente di tutto questo.
 - **I controlli si fanno due volte**: nel frontend per aiutare l'utente, nel backend per sicurezza.
 - **Mai token in `localStorage`**: solo in memoria, come in `api.js`.
+- **Miniature nelle griglie, copia grande solo per la carta da sola**: le immagini restano leggere anche da telefono.
 - **Mai dati personali negli URL** (es. email nella barra degli indirizzi).
 - **Pagine dell'area utente e del backoffice in `noindex`**; `robots.txt` e `sitemap.xml` solo con le pagine pubbliche.
 - **Responsive**: ATT, DIF, fazione e rarità leggibili anche su mobile.

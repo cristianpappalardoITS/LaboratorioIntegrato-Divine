@@ -153,9 +153,11 @@ erDiagram
         uuid faction_id FK
         uuid rarity_id FK
         uuid card_set_id FK
-        varchar illustration_url "3:2"
+        varchar illustration_url "3:2, WebP grande"
+        varchar illustration_thumb_url "miniatura"
         numeric illustration_focus_y "ritaglio"
         varchar full_art_illustration_url "2:3, solo Leggendarie"
+        varchar full_art_thumb_url "miniatura"
         numeric full_art_focus_y
         boolean is_active
     }
@@ -383,8 +385,10 @@ erDiagram
 | **Limiti per TIER in `rarities`**: `max_per_deck` e `max_copies` | Il regolamento ha limiti per rarità (Leggendarie 2, Epiche 4, Rare 8, Comuni libere) e copie che dipendono dalla rarità (2, ma 1 per le Leggendarie). Stando in tabella si ribilanciano senza toccare il codice. |
 | **Codice stabile per ogni carta** (`cards.code`, es. `BASE-001`) | Le migration con i dati e i nomi dei file immagine usano il codice, che non cambia se si corregge il nome della carta. |
 | **La carta la monta il frontend** con un componente JavaScript (frontend in HTML, CSS e JavaScript, es. una funzione `drawCard`) | Il componente riceve i dati della carta e l'illustrazione e monta: illustrazione con il suo ritaglio, cornice della fazione e della rarità con la finestra trasparente, simbolo, nome, testi, ATT e DIF. Se cambia una statistica o un testo, la carta si aggiorna da sola: nessuna immagine da ricomporre. Le 15 carte del set di prova sono il riferimento visivo. |
-| **Nel database solo illustrazione e ritaglio** (`illustration_url`, `illustration_focus_y`, `full_art_illustration_url`, `full_art_focus_y`) | L'illustrazione è l'unica parte diversa per ogni carta. Cornici, simboli, coordinate delle zone e font sono uguali per tutte e stanno nel frontend. Il ritaglio è lo stesso del compositore: niente zoom, solo spostamento verticale. |
-| **Illustrazioni servite dal backend** | Quelle del catalogo ufficiale stanno nel repository, quelle caricate dal backoffice in un volume Docker. Restano PNG originali, senza conversioni, così i loro metadati non si perdono. |
+| **Nel database solo illustrazione e ritaglio** (`illustration_url`, `illustration_thumb_url`, `illustration_focus_y` e le stesse per la full art) | L'illustrazione è l'unica parte diversa per ogni carta. Cornici, simboli, coordinate delle zone e font sono uguali per tutte e stanno nel frontend. Il ritaglio lo fa il JavaScript, ma solo il database sa dove sta il soggetto di ogni immagine: per questo il numero è nella carta (0,40 per quasi tutte, 0,27 per Il Sogno Lucido). Il ritaglio è lo stesso del compositore: niente zoom, solo spostamento verticale. |
+| **Originali intatti, al browser copie WebP** (`*_url` = grande, `*_thumb_url` = miniatura) | I PNG originali pesano 2,5–3,3 MB: con le 12 carte di oggi la prima visita alla collezione scaricherebbe circa 55 MB tra illustrazioni e cornici. L'originale resta com'è, con i suoi metadati, e non si serve al browser. Il backend serve due copie WebP: grande (larghezza 1024 px, circa 120–350 KB) per il dettaglio della carta e l'apertura dei pacchetti, miniatura (larghezza 400 px, circa 25–80 KB) per le griglie. Con le miniature la collezione scende sotto 1 MB. Due colonne in più evitano regole sul nome del file da ricordare nel frontend. |
+| **Immagini in cache per sempre** (versione nel nome del file) | Ogni file ha un numero di versione, es. `base-004-v1.webp`. Il backend serve `/images/**` con `Cache-Control: public, max-age=31536000, immutable`: il browser scarica ogni immagine una volta sola. Se un'illustrazione cambia, la nuova ha un nome nuovo (`base-004-v2.webp`) e il browser la scarica perché l'URL è diverso. La carta montata non si salva: il JavaScript la rimonta a ogni pagina in pochi millisecondi, con le immagini già in cache. |
+| **Illustrazioni servite dal backend** | Quelle del catalogo ufficiale stanno nel repository, quelle caricate dal backoffice in un volume Docker. Gli originali restano PNG senza conversioni, così i loro metadati non si perdono; le copie WebP sono file a parte. |
 | **Full art come copia rara della stessa carta** (`user_cards.full_art_quantity`) | Solo le Leggendarie hanno la full art. Quando esce una Leggendaria da un pacchetto c'è una piccola probabilità (`packs.full_art_chance`, es. 5%) che sia full art. In partita è la stessa carta: stesse statistiche, conta per gli stessi limiti di copie. Cambia solo l'immagine, in collezione e negli scambi. |
 | **Attacco e difesa almeno 1** (`CHECK`) | Con attacco almeno 1 ogni round toglie difesa; insieme al limite di round, la partita finisce sempre. |
 | **Espansioni** (`card_sets`) con pacchetti legati a un'espansione (`packs.card_set_id`) | Permette pacchetti che contengono solo le carte nuove. Con `card_set_id = NULL` il pacchetto pesca da tutte le espansioni. |
@@ -471,7 +475,8 @@ Dal backoffice un pacchetto si può attivare solo se, per ogni rarità usata nei
 ### Catalogo
 
 - `full_art_illustration_url` si può impostare solo su carte Leggendarie.
-- Le illustrazioni caricate dal backoffice si salvano così come sono (PNG), senza conversioni che toglierebbero i metadati.
+- Le illustrazioni caricate dal backoffice si salvano così come sono (PNG), senza conversioni che toglierebbero i metadati. Il backend crea anche le due copie WebP (grande e miniatura) e salva i loro URL nella carta: `illustration_url` e `illustration_thumb_url` si impostano sempre insieme (lo controlla anche `chk_cards_thumbs`).
+- Una nuova illustrazione per una carta che ne ha già una prende la versione successiva nel nome (`-v2`, `-v3`...). Un file già pubblicato non si sovrascrive mai, altrimenti i browser continuerebbero a mostrare quello vecchio dalla cache.
 - `factions.lord_card_id` deve essere una Leggendaria della stessa fazione.
 - Una carta ha al massimo un effetto, come prevede il regolamento attuale.
 
@@ -640,7 +645,16 @@ Flyway esegue le migration in ordine di numero. Una migration già eseguita **no
 ### Convenzioni del catalogo
 
 - **Codice carta:** `<codice espansione>-<numero a 3 cifre>`, es. `BASE-001`, `EXP1-012`.
-- **Illustrazioni:** il file ha il nome del codice in minuscolo, es. `base-004.png`, e la full art `base-004-fullart.png`, come nella cartella `carte/illustrazioni`. Restano PNG originali, con i loro metadati. Quelle del catalogo ufficiale stanno nel repository; quelle caricate dal backoffice nel volume dei file caricati.
+- **Illustrazioni:** l'originale ha il nome del codice in minuscolo, es. `base-004.png`, e la full art `base-004-fullart.png`, come nella cartella `carte/illustrazioni`. Resta PNG, con i suoi metadati. Le copie servite al browser aggiungono la versione e, per la miniatura, `-thumb`:
+
+  | File | Esempio | Uso |
+  |------|---------|-----|
+  | Originale | `base-004.png` | Archivio, non servito |
+  | Grande | `/images/cards/base-004-v1.webp` | `illustration_url` |
+  | Miniatura | `/images/cards/base-004-v1-thumb.webp` | `illustration_thumb_url` |
+  | Full art grande e miniatura | `/images/cards/base-004-fullart-v1.webp`, `…-v1-thumb.webp` | `full_art_illustration_url`, `full_art_thumb_url` |
+
+  Quelle del catalogo ufficiale stanno nel repository; quelle caricate dal backoffice nel volume dei file caricati.
 - **Cornici e simboli:** file statici del frontend, uno per fazione e rarità, con la finestra trasparente e le coordinate delle zone (nome, simbolo, testi, ATT, DIF).
 - **Riferimenti tra tabelle nelle migration:** sempre tramite `code` (fazione, rarità, espansione, carta), mai tramite `id` scritti a mano.
 - **Il catalogo ufficiale cambia solo con le migration.** Se si crea dal backoffice una carta che poi viene inserita anche da una migration, Flyway fallisce sul codice duplicato.
@@ -685,7 +699,7 @@ UPDATE factions f SET lord_card_id = c.id FROM cards c WHERE c.code = 'BASE-012'
 INSERT INTO packs (name, pack_type, price_credits) VALUES ('Pacchetto base', 'SHOP', 100);
 
 INSERT INTO pack_covers (pack_id, faction_id, name, image_url, sort_order)
-SELECT p.id, f.id, f.lord_title, CONCAT('/images/packs/base-', LOWER(f.code), '.png'), f.id
+SELECT p.id, f.id, f.lord_title, CONCAT('/images/packs/base-', LOWER(f.code), '-v1.webp'), f.id
 FROM packs p, factions f
 WHERE p.name = 'Pacchetto base';
 
@@ -760,6 +774,7 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Punto | Da decidere | Proposta | Chi |
 |-------|-------------|----------|-----|
 | Caricamento delle immagini | Dove vanno illustrazioni e copertine caricate dal backoffice | Volume Docker del backend (deciso); nel database solo il percorso | SWD |
+| Creazione delle copie WebP | Chi crea copia grande e miniatura dagli originali | Catalogo ufficiale: uno script Python (Pillow, come il compositore) le crea una volta e si salvano nel repository. Backoffice: il backend le crea al caricamento con una libreria Java che scrive WebP (es. `webp-imageio`) | SWD |
 | Montaggio nel componente | Il componente della carta disegna su canvas oppure sovrappone livelli HTML/CSS | Canvas: stesso risultato delle carte di prova | WMD |
 | Ruolo del compositore Python | Se prepara cornici con finestra trasparente e coordinate delle zone per il frontend (e anteprime), oppure se tutto passa in JavaScript | Da scegliere | SWD + WMD |
 | Fuso orario delle date | In che fuso si salvano le date. Conta per la ricompensa giornaliera e per le partite del giorno che contano per il rank | Tutto in UTC nel database, conversione nel frontend | SWD |
@@ -822,6 +837,15 @@ Collegamento tra la sitemap del portale proposta da WMD (25 ottobre 2026) e le t
 ---
 
 ## Cosa è cambiato in questa versione
+
+### 27 ottobre 2026: immagini leggere e cache
+
+| Cosa | Prima | Ora |
+|------|-------|-----|
+| Immagini servite al browser | PNG originali (2,5–3,3 MB ciascuna) | Copie WebP: grande (larghezza 1024 px) e miniatura (larghezza 400 px). Gli originali restano intatti, con i loro metadati, e non si servono |
+| Colonne di `cards` | Solo `illustration_url` e `full_art_illustration_url` | In più `illustration_thumb_url` e `full_art_thumb_url`, con `chk_cards_thumbs` (copia grande e miniatura sempre insieme) |
+| Nomi dei file | `base-004.png` | `base-004-v1.webp` e `base-004-v1-thumb.webp`: la versione nel nome permette la cache per sempre |
+| Ritaglio (`*_focus_y`) | Nel database | Resta nel database: lo applica il JavaScript |
 
 ### 26 ottobre 2026: Dreamscape, PostgreSQL e amici
 

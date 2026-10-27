@@ -169,7 +169,11 @@ CREATE TABLE card_sets (
 -- (solo Leggendarie, controllato dal service). La full art è la stessa carta.
 -- *_focus_y: ritaglio verticale dell'illustrazione, da 0 (in alto) a 1 (in basso),
 -- come la colonna centro_y del compositore (es. Il Sogno Lucido 0.27).
--- Le illustrazioni restano PNG originali, con i loro metadati.
+-- Immagini: il PNG originale resta intatto, con i suoi metadati, e non si serve al
+-- browser. Dall'originale si creano due copie WebP: grande (larghezza 1024 px) e
+-- miniatura (larghezza 400 px). *_url = copia grande, *_thumb_url = miniatura.
+-- Il nome del file ha un numero di versione (es. base-004-v1.webp): una nuova
+-- illustrazione ha un nome nuovo, così il browser tiene i file in cache per sempre.
 -- attack >= 1: con attacco almeno 1 ogni round toglie difesa e la partita va avanti.
 CREATE TABLE cards (
     id                        UUID        NOT NULL DEFAULT uuidv7(),
@@ -182,8 +186,10 @@ CREATE TABLE cards (
     rarity_id                 UUID         NOT NULL,
     card_set_id               UUID         NOT NULL,
     illustration_url          VARCHAR(500) NULL,
+    illustration_thumb_url    VARCHAR(500) NULL,
     illustration_focus_y      NUMERIC(3,2) NOT NULL DEFAULT 0.40,
     full_art_illustration_url VARCHAR(500) NULL,
+    full_art_thumb_url        VARCHAR(500) NULL,
     full_art_focus_y          NUMERIC(3,2) NOT NULL DEFAULT 0.40,
     is_active                 BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at                TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -196,7 +202,10 @@ CREATE TABLE cards (
     CONSTRAINT fk_cards_card_set FOREIGN KEY (card_set_id) REFERENCES card_sets (id),
     CONSTRAINT chk_cards_attack CHECK (attack >= 1),
     CONSTRAINT chk_cards_defense CHECK (defense >= 1),
-    CONSTRAINT chk_cards_focus CHECK (illustration_focus_y BETWEEN 0 AND 1 AND full_art_focus_y BETWEEN 0 AND 1)
+    CONSTRAINT chk_cards_focus CHECK (illustration_focus_y BETWEEN 0 AND 1 AND full_art_focus_y BETWEEN 0 AND 1),
+    -- Copia grande e miniatura ci sono sempre insieme
+    CONSTRAINT chk_cards_thumbs CHECK ((illustration_url IS NULL) = (illustration_thumb_url IS NULL)
+                                       AND (full_art_illustration_url IS NULL) = (full_art_thumb_url IS NULL))
 );
 
 -- Ora che cards esiste, si collega il Lord di ogni fazione alla sua carta.
@@ -330,6 +339,8 @@ CREATE TABLE packs (
 -- Es. il pacchetto base ha tre copertine, una per ogni Lord di fazione:
 -- il giocatore sceglie quella che preferisce quando compra.
 -- Un pacchetto senza copertine usa packs.image_url.
+-- Le immagini dei pacchetti e delle copertine seguono le regole delle illustrazioni:
+-- una copia WebP con la versione nel nome (es. base-dreams-v1.webp), niente miniatura.
 CREATE TABLE pack_covers (
     id         UUID        NOT NULL DEFAULT uuidv7(),
     pack_id    UUID         NOT NULL,
