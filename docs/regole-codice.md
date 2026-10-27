@@ -139,10 +139,12 @@ public class DeckController {
 
 ## Database
 
-- Le modifiche allo schema si fanno con **script SQL versionati** in `database/` (o con lo strumento di migrazione scelto), mai a mano solo sul proprio PC.
-- Ogni tabella ha una chiave primaria `id` (`BIGINT AUTO_INCREMENT`).
-- Le relazioni hanno sempre la foreign key dichiarata.
-- I dati di prova stanno in uno script separato (`database/seed/`).
+- **PostgreSQL 18** e **Flyway**. Le modifiche allo schema si fanno solo con migration versionate in `backend/src/main/resources/db/migration/`, mai a mano sul proprio PC. Una migration già eseguita non si modifica: se serve una correzione, si scrive una migration nuova.
+- Ogni tabella ha una chiave primaria `id` di tipo `UUID` v7. In Java il campo è `java.util.UUID`, generato da Hibernate con `@UuidGenerator(style = UuidGenerator.Style.VERSION_7)`. Il `DEFAULT uuidv7()` del database serve alle migration con i dati.
+- Le relazioni hanno sempre la foreign key dichiarata. PostgreSQL non indicizza da solo le colonne delle foreign key: se si cercano righe per quella colonna, serve un indice.
+- `spring.jpa.hibernate.ddl-auto=validate`: Hibernate controlla le tabelle ma non le crea né le modifica.
+- I dati finti per sviluppo e test stanno in `backend/src/main/resources/db/testdata/`, attivi solo nel profilo `dev` e nei test. Il catalogo vero sta nelle migration `V100` e successive.
+- Schema completo e spiegazione delle scelte: [docs/database/schema.md](database/schema.md).
 
 ## Frontend
 

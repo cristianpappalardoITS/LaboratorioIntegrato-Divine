@@ -178,6 +178,7 @@ erDiagram
         uuid deck_id FK
         uuid card_id FK
         int quantity
+        boolean is_full_art "mostra la full art"
     }
 ```
 
@@ -423,6 +424,8 @@ erDiagram
 | **Momenti degli effetti** (`ON_PLAY`, `WHILE_IN_PLAY`, `END_OF_ROUND`, `ON_DEATH`, `ON_KILL`) | Sono i momenti della lista di Nicolas: quando la carta viene giocata, finché resta in campo, alla fine di ogni round, quando viene uccisa, quando uccide. |
 | **Il comportamento dell'effetto sta nel codice Java**, il database salva solo `code`, momento e valore | Gli effetti sono molto diversi tra loro: descriverli tutti con colonne sarebbe rigido. Il motore associa ogni `code` alla sua classe Java. |
 | **`id UUID` v7 su ogni tabella**, anche quelle di relazione (`DEFAULT uuidv7()`) | Una regola sola per tutti. Gli id finiscono negli URL e nelle API (`/sfide/{id}`): un UUID non si indovina, un numero sì. La versione 7 è ordinata nel tempo, quindi gli indici restano efficienti. In Java il campo è `java.util.UUID`; con JPA evita le chiavi composte. L'unicità reale è garantita dai vincoli `UNIQUE`. |
+| **UUID generati da Hibernate** (Spring Boot 4, `@UuidGenerator(style = UuidGenerator.Style.VERSION_7)`) | L'id esiste già prima del salvataggio: niente riletture dopo l'insert, entità più semplici da testare. Il `DEFAULT uuidv7()` resta nel database per le migration con i dati e per chi scrive SQL a mano. |
+| **Indici sulle chiavi esterne usate nelle ricerche** | PostgreSQL non li crea da solo. Ci sono dove serve: es. `refresh_tokens.user_id` (logout ovunque) e `pack_opening_cards.pack_opening_id` (pagina dell'apertura). Le altre chiavi esterne sono già coperte da un vincolo `UNIQUE` che inizia con quella colonna, o stanno su tabelle piccole. |
 | **Date in `TIMESTAMPTZ`, in UTC** | Nessun dubbio sul fuso orario: conta per la ricompensa giornaliera e per le partite del giorno che valgono per il rank. |
 | **`updated_at` aggiornato da JPA** (`@UpdateTimestamp`) | PostgreSQL non ha `ON UPDATE CURRENT_TIMESTAMP`: lo fa Hibernate a ogni salvataggio, senza trigger. |
 
@@ -437,7 +440,7 @@ Queste regole stanno nei **service** del backend, sempre dentro una transazione 
 Prima di tutto controlla che l'utente abbia accettato Privacy Policy e Termini di servizio e salva le due date (`privacy_accepted_at`, `terms_accepted_at`).
 
 Nella stessa transazione che crea l'utente:
-1. Apre il pacchetto **STARTER** (set iniziale: 14 Comuni e 6 Rare estratte dalla pool).
+1. Apre il pacchetto **STARTER** (set iniziale: 14 Comuni e 6 Rare estratte a caso). Solo per questo pacchetto l'estrazione **non supera le copie massime per carta** (`rarities.max_copies`): una carta che ha già 2 copie si toglie dall'estrazione. Così le 20 carte formano sempre un mazzo valido. Il mazzo non si crea in automatico: lo compone il giocatore nell'editor.
 2. Apre i due pacchetti **WELCOME**: uno dei due ha uno slot con l'Epica garantita.
 3. Scrive le aperture con `source = 'SIGNUP'` e `price_paid = 0` e aggiorna `user_cards`. Nessun movimento di crediti.
 4. Se si decide un bonus di crediti iniziale, scrive anche `credit_transactions` con `type = 'SIGNUP_BONUS'`.
@@ -450,7 +453,10 @@ Al salvataggio di un mazzo il service verifica:
 - esattamente 20 carte (valore nella configurazione, uguale per tutte le modalità);
 - copie massime per carta secondo la rarità (`rarities.max_copies`);
 - limite per TIER (`rarities.max_per_deck`);
-- l'utente possiede abbastanza copie di ogni carta (`user_cards.quantity`, full art comprese).
+- l'utente possiede abbastanza copie di ogni carta (`user_cards.quantity`, full art comprese);
+- `is_full_art = TRUE` solo se la carta ha una full art e l'utente ne possiede almeno una copia (`user_cards.full_art_quantity >= 1`). Il database controlla già che la riga abbia `quantity = 1` (`chk_deck_cards_full_art`).
+
+La full art nel mazzo è solo una scelta di aspetto: si vede nell'editor, nella lista dei mazzi e in partita, e finisce nella copia del mazzo salvata in `matches` (`isFullArt`).
 
 Un mazzo può diventare non valido dopo, se l'utente scambia carte che ci stavano dentro. Per questo il mazzo si **ricontrolla quando si invia o si accetta una sfida**.
 
@@ -533,14 +539,14 @@ Proposta da concordare con chi sviluppa il motore di gioco. I nomi seguono il re
   "cards": [
     {
       "cardId": "019a1f30-0000-7000-8000-000000000008", "cardCode": "BASE-008", "name": "L'Uomo Senza Volto", "attack": 8, "defense": 5,
-      "faction": "NIGHTMARES", "rarity": "LEGENDARY", "quantity": 1,
+      "faction": "NIGHTMARES", "rarity": "LEGENDARY", "quantity": 1, "isFullArt": true,
       "effects": [ { "code": "WEAKENING", "name": "Indebolimento", "triggerEvent": "WHILE_IN_PLAY", "value": 2 } ]
     }
   ]
 }
 ```
 
-Ogni carta ha al massimo un effetto: `effects` è una lista vuota se la carta non ne ha.
+Ogni carta ha al massimo un effetto: `effects` è una lista vuota se la carta non ne ha. `isFullArt` dice se nel replay della partita si mostra la full art.
 
 **`round_log`**
 
@@ -601,17 +607,41 @@ L'ordine conta: ogni file crea tabelle che dipendono solo da quelle dei file pre
 
 Fazioni, rarità, espansioni, carte e pacchetti si caricano con migration separate, dopo le tabelle. Come organizzarle è spiegato in [Dati del catalogo ed espansioni](#dati-del-catalogo-ed-espansioni).
 
+### Dati finti per sviluppo e test
+
+Con le 12 carte di prova non si forma un mazzo valido (al massimo 18 carte). Per sviluppare mazzi, sfide e motore senza aspettare il catalogo definitivo, si usano **carte inventate** in una cartella a parte:
+
+| Cartella | Contenuto | Quando si esegue |
+|----------|-----------|------------------|
+| `db/migration/` | Tabelle (`V1`–`V8`) e catalogo vero (`V100` e successive) | Sempre: sviluppo, test, produzione |
+| `db/testdata/` | Circa 30 carte finte (es. 12 Comuni, 9 Rare, 6 Epiche, 3 Leggendarie), pacchetti e qualche utente di prova | Solo nel profilo `dev` e nei test |
+
+- Numerazione da `V900` in su (es. `V900__seed_test_cards.sql`), così non si scontra mai con le migration vere.
+- Codici con il prefisso `TEST-` (es. `TEST-001`) e l'espansione `TEST`: non si confondono con le carte vere.
+- Le illustrazioni finte possono restare vuote (`illustration_url` NULL): il frontend mostra un segnaposto.
+- Le password degli utenti di prova si scrivono già cifrate con BCrypt, mai in chiaro. Gli utenti e le password di prova sono elencati nel README del backend.
+- Quando arriva il catalogo vero, i dati finti restano solo per i test.
+
 ### Configurazione Spring Boot
 
 ```properties
+# application.properties (comune)
 spring.datasource.url=jdbc:postgresql://localhost:5432/dreamscape
 spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
 spring.jpa.hibernate.ddl-auto=validate
+```
+
+```properties
+# application-dev.properties (profilo dev) e configurazione dei test
+spring.flyway.locations=classpath:db/migration,classpath:db/testdata
 ```
 
 Utente e password del database arrivano da variabili d'ambiente, mai dal repository.
 
 Con `validate`, Hibernate **non** modifica il database: controlla solo che le entità corrispondano alle tabelle create da Flyway.
+
+Versioni: **Spring Boot 4** (con Hibernate 7, che genera gli UUID v7) e **PostgreSQL 18**. Prima di iniziare va controllato che la versione di Flyway inclusa in Spring Boot supporti PostgreSQL 18, e che PostgreSQL 18 ci sia anche su RDS per il deploy.
 
 ---
 
@@ -743,7 +773,8 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Punto | Da decidere | Proposta | Chi |
 |-------|-------------|----------|-----|
 | Come si ottengono i crediti in fase 1 | Bonus di registrazione, ricompensa giornaliera, premi per le vittorie, vendita di carte doppie... Determina i valori di `credit_transactions.type` | Ricompensa giornaliera + premio vittoria; bonus di registrazione solo se set iniziale e benvenuto non bastano | DGS (Maie) |
-| Set iniziale e benvenuto: dettagli | Fazioni del set iniziale (tutte e tre o una scelta dal giocatore) e contenuto dei pacchetti di benvenuto (punti da valutare del regolamento) | Tutte e tre le fazioni; benvenuto come il pacchetto base | Maie + Nicolas |
+| Set iniziale e benvenuto: dettagli | Deciso: set iniziale casuale con il limite di copie, mazzo composto dal giocatore. Da decidere: fazioni del set iniziale (tutte e tre o una scelta dal giocatore) e contenuto dei pacchetti di benvenuto | Tutte e tre le fazioni; benvenuto come il pacchetto base | Maie + Nicolas |
+| Catalogo minimo | Quante carte servono in fase 1. Il set iniziale richiede almeno 7 Comuni e 3 Rare diverse; oggi le carte sono 12 (3 per rarità) | Circa 30 carte; nel frattempo si sviluppa con le carte finte di `db/testdata` | Maie + Nicolas + DGS |
 | Pesi e numeri dei pacchetti | Prezzo, carte per slot, peso delle Leggendarie nello slot Epica/Leggendaria, probabilità della full art | Pacchetto da 5 carte (3 Comuni, 1 Rara, 1 Epica o Leggendaria con peso 10), full art 5% | Maie + Nicolas |
 | Pesi per singola carta | Dentro una rarità ogni carta ha la stessa probabilità, oppure servono pesi per carta (`cards.drop_weight`)? | Stessa probabilità dentro la rarità | Maie + Nicolas |
 | Espansioni e mazzi | Se le carte di tutte le espansioni si possono usare insieme in un mazzo, o servono formati con solo alcune espansioni | Tutte insieme in fase 1 | Nicolas + DGS |
@@ -778,7 +809,12 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Montaggio nel componente | Il componente della carta disegna su canvas oppure sovrappone livelli HTML/CSS | Canvas: stesso risultato delle carte di prova | WMD |
 | Ruolo del compositore Python | Se prepara cornici con finestra trasparente e coordinate delle zone per il frontend (e anteprime), oppure se tutto passa in JavaScript | Da scegliere | SWD + WMD |
 | Fuso orario delle date | In che fuso si salvano le date. Conta per la ricompensa giornaliera e per le partite del giorno che contano per il rank | Tutto in UTC nel database, conversione nel frontend | SWD |
-| Database per i test | Con cosa si testano repository e service: H2 in memoria o PostgreSQL vero (Testcontainers). H2 non supporta `JSONB` né gli indici su espressioni come `LOWER(email)` | PostgreSQL vero con Testcontainers; il motore di gioco si testa senza database | SWD |
+| Database per i test | Con cosa si testano repository e service: H2 in memoria o PostgreSQL vero (Testcontainers). H2 non supporta `JSONB` né gli indici su espressioni come `LOWER(email)` | PostgreSQL 18 vero con Testcontainers, con i dati finti di `db/testdata`; il motore di gioco si testa senza database | SWD |
+| Scambio non più valido | Cosa succede a uno scambio in attesa se l'amicizia viene tolta o se mancano le carte quando si accetta | Annullato in automatico (`CANCELLED`) e messaggio a chi prova ad accettare | SWD |
+| Ricompensa giornaliera chiesta due volte insieme | Due richieste nello stesso momento non devono dare due ricompense | Colonna `users.last_daily_reward_on` e un `UPDATE ... WHERE last_daily_reward_on < :oggi` atomico, quando DGS conferma la ricompensa | SWD |
+| Inizio del "giorno" | Per ricompensa giornaliera e partite del giorno che contano per il rank | Mezzanotte italiana (`Europe/Rome`); nel database le date restano in UTC | SWD + DGS |
+| Sfide in attesa tra le stesse persone | Se A può mandare più sfide in attesa a B | Al massimo una sfida in attesa per coppia | SWD |
+| Effetti con o senza X | Il backoffice deve sapere quando chiedere il valore dell'effetto | Colonna `effects.has_value` | SWD + Nicolas |
 
 ---
 
@@ -846,6 +882,12 @@ Collegamento tra la sitemap del portale proposta da WMD (25 ottobre 2026) e le t
 | Colonne di `cards` | Solo `illustration_url` e `full_art_illustration_url` | In più `illustration_thumb_url` e `full_art_thumb_url`, con `chk_cards_thumbs` (copia grande e miniatura sempre insieme) |
 | Nomi dei file | `base-004.png` | `base-004-v1.webp` e `base-004-v1-thumb.webp`: la versione nel nome permette la cache per sempre |
 | Ritaglio (`*_focus_y`) | Nel database | Resta nel database: lo applica il JavaScript |
+| Generazione degli UUID | `DEFAULT uuidv7()` | Li genera Hibernate (Spring Boot 4, `@UuidGenerator(style = VERSION_7)`); il default resta per le migration con i dati |
+| Indici | Mancavano su alcune chiavi esterne | Nuovi `idx_refresh_tokens_user` e `idx_pack_opening_cards_opening` |
+| `matches.winner_id` | `ON DELETE SET NULL` | Nessuna azione: una vittoria non diventa mai un pareggio |
+| Set iniziale | "Estratto dalla pool" | Casuale, senza superare le copie massime per carta: forma sempre un mazzo valido, composto dal giocatore |
+| Full art nel mazzo | Non indicata | `deck_cards.is_full_art`, scelta dal giocatore, salvata anche nella copia del mazzo in `matches` |
+| Dati per sviluppo e test | Non previsti | Carte finte in `db/testdata` (`V900+`, codici `TEST-`), solo nel profilo `dev` e nei test |
 
 ### 26 ottobre 2026: Dreamscape, PostgreSQL e amici
 

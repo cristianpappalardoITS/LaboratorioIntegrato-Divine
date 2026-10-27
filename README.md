@@ -33,8 +33,8 @@ I dettagli sono nella [proposta di regolamento](docs/proposte/proposta-regolamen
 | Livello | Tecnologia |
 |---------|------------|
 | Motore di gioco | Java, modulo isolato, test **JUnit** |
-| Backend / portale | Java + **Spring Boot**, Spring Data **JPA**, accesso con token **JWT** |
-| Database | **PostgreSQL**, migration con **Flyway** |
+| Backend / portale | Java + **Spring Boot 4**, Spring Data **JPA** (Hibernate 7), accesso con token **JWT** |
+| Database | **PostgreSQL 18**, chiavi **UUID v7**, migration con **Flyway**, test con **Testcontainers** |
 | Frontend | **HTML, CSS e JavaScript** |
 | Gestione progetto | **GitHub Projects** |
 

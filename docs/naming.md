@@ -53,9 +53,10 @@ void addCard_thirdCopyOfSameCard_throwsException() { ... }
 @Table(name = "user_cards")
 public class UserCard {
 
+    // Chiave UUID v7 generata da Hibernate (Spring Boot 4) prima del salvataggio
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator(style = UuidGenerator.Style.VERSION_7)
+    private UUID id;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id")

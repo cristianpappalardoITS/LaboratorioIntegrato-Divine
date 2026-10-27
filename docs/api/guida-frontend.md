@@ -322,7 +322,7 @@ Risposta di `GET /rules`:
 }
 ```
 
-Il set iniziale ha 20 carte (14 Comuni e 6 Rare): basta per comporre subito un mazzo. Le carte si possono rivelare una alla volta come in un'apertura.
+Il set iniziale ha 20 carte (14 Comuni e 6 Rare), estratte senza mai superare le copie massime: con queste 20 carte si compone sempre un mazzo valido. Il mazzo **non** viene creato in automatico: dalla pagina Benvenuto conviene un pulsante "Componi il tuo primo mazzo" che apre l'editor. Le carte si possono rivelare una alla volta come in un'apertura.
 
 #### Dashboard
 
@@ -431,7 +431,7 @@ Il dettaglio mostra anche contro chi la fazione è forte o debole (da `GET /rule
 Cosa si manda al salvataggio:
 
 ```json
-{ "name": "Incubi veloci", "cards": [ { "cardId": "019a1f30-0000-7000-8000-000000000005", "quantity": 2 }, { "cardId": "019a1f30-0000-7000-8000-000000000008", "quantity": 1 } ] }
+{ "name": "Incubi veloci", "cards": [ { "cardId": "019a1f30-0000-7000-8000-000000000005", "quantity": 2, "isFullArt": false }, { "cardId": "019a1f30-0000-7000-8000-000000000008", "quantity": 1, "isFullArt": true } ] }
 ```
 
 Cosa si riceve:
@@ -443,9 +443,11 @@ Cosa si riceve:
   "totalCards": 20,
   "isValid": true,
   "problems": [],
-  "cards": [ { "card": { "...": "..." }, "quantity": 2 } ]
+  "cards": [ { "card": { "...": "..." }, "quantity": 2, "isFullArt": false } ]
 }
 ```
+
+- **Full art nel mazzo:** per una Leggendaria di cui l'utente possiede una copia full art (`fullArtQuantity` ≥ 1 nella collezione), l'editor mostra un interruttore "Usa la full art". Con `isFullArt: true` la carta si monta con `fullArtIllustrationUrl` nell'editor, nella lista dei mazzi e nel replay della partita. Non cambia le statistiche. Se l'utente non ha la full art, il backend risponde `400`.
 
 - Se il mazzo non rispetta le regole il salvataggio risponde `400`, e `problems` dice cosa non va, es. `"Le Rare sono 9: il massimo è 8."`.
 - L'editor mostra i contatori in diretta (carte totali, copie, limiti per rarità) con i numeri di `GET /rules`, così l'utente vede l'errore prima di salvare. Il backend controlla comunque.

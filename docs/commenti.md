@@ -133,12 +133,13 @@ async function loadCollection(rarity) { ... }
 ```
 
 ```sql
--- Una riga per ogni copia posseduta: quantity indica quante copie ha l'utente
+-- Una riga per (utente, carta): quantity indica quante copie ha l'utente
 CREATE TABLE user_cards (
-    id       BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id  BIGINT NOT NULL,
-    card_id  BIGINT NOT NULL,
-    quantity INT    NOT NULL DEFAULT 1,
+    id       UUID NOT NULL DEFAULT uuidv7(),
+    user_id  UUID NOT NULL,
+    card_id  UUID NOT NULL,
+    quantity INT  NOT NULL,
+    CONSTRAINT pk_user_cards PRIMARY KEY (id),
     CONSTRAINT fk_user_cards_user FOREIGN KEY (user_id) REFERENCES users (id),
     CONSTRAINT fk_user_cards_card FOREIGN KEY (card_id) REFERENCES cards (id)
 );

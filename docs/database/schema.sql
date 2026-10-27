@@ -8,8 +8,12 @@
 -- Regolamento di riferimento: docs/proposte/proposta-regolamento-dreamscape.pdf
 --
 -- Regole comuni:
--- - Chiavi primarie e chiavi esterne: UUID v7 (ordinati nel tempo), generati con uuidv7().
---   In Java il campo è java.util.UUID. Gli UUID non si indovinano: si possono usare negli URL.
+-- - Chiavi primarie e chiavi esterne: UUID v7 (ordinati nel tempo). Gli UUID non si
+--   indovinano: si possono usare negli URL. In Java il campo è java.util.UUID e lo genera
+--   Hibernate (Spring Boot 4) con @UuidGenerator(style = VERSION_7); il DEFAULT uuidv7()
+--   serve alle migration con i dati e a chi scrive SQL a mano.
+-- - PostgreSQL non indicizza da solo le colonne delle chiavi esterne: gli indici ci sono
+--   dove si cerca per quella colonna.
 -- - Date e ore: TIMESTAMPTZ, salvate in UTC.
 -- - updated_at: lo aggiorna JPA (@UpdateTimestamp); PostgreSQL non ha ON UPDATE.
 -- - Testi da cercare senza distinguere maiuscole (username, email): indici UNIQUE su LOWER().
@@ -69,6 +73,9 @@ CREATE TABLE refresh_tokens (
     CONSTRAINT uq_refresh_tokens_token_hash UNIQUE (token_hash),
     CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
+
+-- Per revocare tutti i token di un utente (logout ovunque, cambio password).
+CREATE INDEX idx_refresh_tokens_user ON refresh_tokens (user_id);
 
 -- Recupero password: token monouso con scadenza (serve solo se il portale invia email).
 CREATE TABLE password_reset_tokens (
@@ -289,16 +296,21 @@ CREATE TABLE decks (
 -- Le carte di un mazzo. I vincoli del regolamento (20 carte, copie massime per rarità,
 -- limiti per TIER, possesso delle carte) si verificano nel service, non qui.
 -- Full art e copia normale sono la stessa carta: nel mazzo contano insieme.
+-- is_full_art: il giocatore sceglie di mostrare la full art nel mazzo e in partita.
+-- Vale solo per le carte con full art (Leggendarie, 1 copia per mazzo) e solo se
+-- l'utente possiede una copia full art: lo controlla il service.
 CREATE TABLE deck_cards (
-    id       UUID        NOT NULL DEFAULT uuidv7(),
-    deck_id  UUID   NOT NULL,
-    card_id  UUID   NOT NULL,
-    quantity INT    NOT NULL,
+    id          UUID    NOT NULL DEFAULT uuidv7(),
+    deck_id     UUID    NOT NULL,
+    card_id     UUID    NOT NULL,
+    quantity    INT     NOT NULL,
+    is_full_art BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT pk_deck_cards PRIMARY KEY (id),
     CONSTRAINT uq_deck_cards_deck_card UNIQUE (deck_id, card_id),
     CONSTRAINT fk_deck_cards_deck FOREIGN KEY (deck_id) REFERENCES decks (id) ON DELETE CASCADE,
     CONSTRAINT fk_deck_cards_card FOREIGN KEY (card_id) REFERENCES cards (id),
-    CONSTRAINT chk_deck_cards_quantity CHECK (quantity > 0)
+    CONSTRAINT chk_deck_cards_quantity CHECK (quantity > 0),
+    CONSTRAINT chk_deck_cards_full_art CHECK (NOT is_full_art OR quantity = 1)
 );
 
 
@@ -309,6 +321,9 @@ CREATE TABLE deck_cards (
 -- I pacchetti (gestiti dal backoffice).
 -- pack_type: SHOP = in vendita nel negozio; STARTER = set iniziale regalato alla
 -- registrazione; WELCOME = pacchetto di benvenuto regalato alla registrazione.
+-- Il set iniziale (slot 14 Comuni + 6 Rare) si estrae a caso ma senza superare le copie
+-- massime per carta (rarities.max_copies): così forma sempre un mazzo valido, che il
+-- giocatore compone da sé. Il limite lo applica il service solo ai pacchetti STARTER.
 -- Solo i pacchetti SHOP hanno un prezzo; gli altri non si possono comprare.
 -- card_set_id: se valorizzato, il pacchetto pesca solo le carte di quell'espansione;
 -- NULL = pesca da tutte le espansioni attive.
@@ -419,6 +434,9 @@ CREATE TABLE pack_opening_cards (
     CONSTRAINT fk_pack_opening_cards_opening FOREIGN KEY (pack_opening_id) REFERENCES pack_openings (id) ON DELETE CASCADE,
     CONSTRAINT fk_pack_opening_cards_card FOREIGN KEY (card_id) REFERENCES cards (id)
 );
+
+-- Per mostrare le carte di un'apertura (pagina /negozio/apertura/{id}).
+CREATE INDEX idx_pack_opening_cards_opening ON pack_opening_cards (pack_opening_id);
 
 
 -- ============================================================================
@@ -549,7 +567,8 @@ CREATE INDEX idx_challenges_challenger_status ON challenges (challenger_id, stat
 -- winner_id NULL = pareggio.
 -- starting_life_points e round_limit: copia dei valori della modalità usati in questa
 -- partita, così lo storico resta corretto anche se la modalità cambia.
--- *_deck_snapshot: copia dei mazzi al momento della partita (carte con ATT, DIF, fazione, effetti).
+-- *_deck_snapshot: copia dei mazzi al momento della partita (carte con ATT, DIF, fazione,
+-- effetti e se mostrare la full art).
 -- round_log: lo svolgimento round per round, così come lo restituisce il motore.
 -- random_seed: permette di rigiocare la stessa partita per verifiche e test
 -- (decide anche il lancio della moneta per l'ordine degli effetti).
@@ -576,7 +595,8 @@ CREATE TABLE matches (
     CONSTRAINT pk_matches PRIMARY KEY (id),
     CONSTRAINT uq_matches_challenge UNIQUE (challenge_id),
     CONSTRAINT fk_matches_challenge FOREIGN KEY (challenge_id) REFERENCES challenges (id) ON DELETE CASCADE,
-    CONSTRAINT fk_matches_winner FOREIGN KEY (winner_id) REFERENCES users (id) ON DELETE SET NULL,
+    -- Niente ON DELETE SET NULL: una vittoria non deve mai diventare un pareggio.
+    CONSTRAINT fk_matches_winner FOREIGN KEY (winner_id) REFERENCES users (id),
     CONSTRAINT chk_matches_end_reason CHECK (end_reason IN ('LIFE_POINTS', 'DECK_EXHAUSTED', 'ROUND_LIMIT')),
     CONSTRAINT chk_matches_total_rounds CHECK (total_rounds >= 1 AND total_rounds <= round_limit)
 );
