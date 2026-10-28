@@ -177,20 +177,22 @@ Frase di collegamento: "Il backend manda solo i dati: la carta la monta il brows
 
 ### Slide 19 · Roadmap (30 s)
 
-**Sulla slide:** linea del tempo.
+**Sulla slide:** gli sprint di una settimana, gli stessi della board.
 
-| Periodo | Obiettivo |
-|---------|-----------|
-| 19/10–02/11 | Concept, regolamento, set di carte di prova, linee guida, database e sitemap |
-| 03/11–23/11 | Sprint 1: progetto backend e frontend, accesso, catalogo, pacchetti, collezione, mazzi, motore di gioco |
-| **23/11** | **SAL:** prime funzionalità funzionanti e documentate |
-| 24/11–10/12 | Sprint 2: scambi e amici, sfide e storico, backoffice, effetti, rifinitura e test |
-| **10/12** | **Presentazione finale:** tutte le funzionalità obbligatorie |
-| Dopo | Rank, acquisto crediti, nuove espansioni |
+| Sprint | Date | Obiettivo |
+|--------|------|-----------|
+| 1–2 | 19/10 – 01/11 | Fondamenta: concept, regolamento, carte di prova, linee guida, database, sitemap |
+| 3 | 02/11 – 08/11 | Basi: progetti backend e frontend, migration, accesso, motore di gioco, catalogo e identità visiva definitivi |
+| 4 | 09/11 – 15/11 | Catalogo, pacchetti, collezione, mazzi, componente della carta |
+| 5 | 16/11 – 22/11 | Effetti, simulazioni, test, editor dei mazzi; **SAL il 23/11** |
+| 6 | 23/11 – 29/11 | Amici e scambi, sfide e storico, API del backoffice |
+| 7 | 30/11 – 05/12 | Backoffice, Swagger, deploy, rifinitura, test finale |
+| 8 | 06/12 – 08/12 | Prove e demo; **presentazione finale il 10/12** |
+| Backlog | dopo | Rank, recupero password via email, acquisto di crediti |
 
-**A voce:** "Le funzionalità obbligatorie prima di tutto il resto: se siamo in ritardo, si sposta il rank, non i requisiti."
+**A voce:** "Lavoriamo a sprint di una settimana, gli stessi della board. Le funzionalità obbligatorie prima di tutto il resto: se siamo in ritardo, si sposta il rank, non i requisiti."
 
-> Date degli sprint da confermare con i team leader.
+> Le issue di ogni sprint sono sulla board (#68–#109), con le etichette e le milestone del SAL e della presentazione finale.
 
 ---
 
