@@ -187,7 +187,7 @@ Frase di collegamento: "Il backend manda solo i dati: la carta la monta il brows
 | 5 | 16/11 – 22/11 | Effetti, simulazioni, test, editor dei mazzi; **SAL il 23/11** |
 | 6 | 23/11 – 29/11 | Amici e scambi, sfide e storico, API del backoffice |
 | 7 | 30/11 – 05/12 | Backoffice, Swagger, deploy, rifinitura, test finale |
-| 8 | 06/12 – 08/12 | Prove e demo; **presentazione finale il 10/12** |
+| 8 | 06/12 – 10/12 | Prove e demo; **presentazione finale il 10/12** |
 | Backlog | dopo | Rank, recupero password via email, acquisto di crediti |
 
 **A voce:** "Lavoriamo a sprint di una settimana, gli stessi della board. Le funzionalità obbligatorie prima di tutto il resto: se siamo in ritardo, si sposta il rank, non i requisiti."
