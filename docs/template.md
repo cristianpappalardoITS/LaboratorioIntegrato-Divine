@@ -226,7 +226,7 @@ class DamageCalculatorTest {
 }
 ```
 
-> Le fazioni nell'esempio sono quelle della proposta Dreams & Nightmares: vanno sostituite con quelle scelte in COM-02.
+> Le fazioni nell'esempio sono quelle di Dreamscape: Dreams, Nightmares e Memories.
 
 ## Template: Decisione (`docs/decisioni/NNN-titolo.md`)
 
@@ -304,7 +304,7 @@ mvn test
 ## Configurazione
 | Variabile | Descrizione | Esempio |
 |-----------|-------------|---------|
-| `DB_URL` | URL del database MySQL | `jdbc:mysql://localhost:3306/tcg` |
+| `DB_URL` | URL del database PostgreSQL | `jdbc:postgresql://localhost:5432/dreamscape` |
 
 ## Struttura
 Breve descrizione dei package principali.

@@ -1,11 +1,13 @@
-# Proposta di schema del database
+# Proposta di schema del database · Dreamscape
 
-> 🚧 **Proposta da verificare, non ancora approvata.** Lo schema segue il [brief](#requisiti-del-brief-coperti), la [proposta di regolamento](../proposte/proposta-regolamento-dreams-nightmares.pdf) e le convenzioni di [naming.md](../naming.md). Diventa definitivo solo dopo la revisione del team SWD: fino ad allora tabelle, colonne e nomi possono cambiare.
+> 🚧 **Proposta da verificare, non ancora approvata.** Lo schema segue il [brief](#requisiti-del-brief-coperti), la [proposta di regolamento](../proposte/proposta-regolamento-dreamscape.pdf) e le convenzioni di [naming.md](../naming.md). Diventa definitivo solo dopo la revisione del team SWD: fino ad allora tabelle, colonne e nomi possono cambiare.
 
-- **DBMS:** MySQL 8.4 LTS (servono i vincoli `CHECK`)
+- **DBMS:** PostgreSQL 18 o successivo
+- **Chiavi:** UUID v7 su tutte le tabelle, generati dal database con `uuidv7()`
+- **Accesso:** token JWT; i refresh token si salvano in `refresh_tokens`
 - **Migration:** Flyway
 - **SQL completo:** [schema.sql](schema.sql), già diviso nelle future migration
-- **Tema:** fazioni, vantaggi, rarità e Lord stanno in tabella. Se il gruppo sceglie un tema diverso da Dreams & Nightmares cambiano i dati, non lo schema.
+- **Gioco:** Dreamscape, a tema sogni, del gruppo Somnia. Fazioni, vantaggi, rarità e Lord stanno in tabella: si ribilanciano cambiando i dati, non lo schema.
 
 ## Indice
 
@@ -28,13 +30,13 @@
 | Area | Tabella | Contenuto |
 |------|---------|-----------|
 | Utenti e accesso | `users` | Giocatori e admin (`role`), saldo crediti, punteggio di rank, consensi Privacy e Termini |
-| | `refresh_tokens` | Token di accesso, solo se si usa JWT |
+| | `refresh_tokens` | Refresh token per l'accesso con JWT (salvati come hash) |
 | | `password_reset_tokens` | Token per il recupero password |
 | Catalogo carte | `factions` | Le fazioni, con il titolo e la carta del loro Lord |
 | | `faction_advantages` | Chi è forte contro chi e con che bonus |
 | | `rarities` | I TIER di rarità, con il limite per mazzo e le copie massime |
 | | `card_sets` | Le espansioni: set base, espansione 1... |
-| | `cards` | Le carte-creatura con codice, ATT, DIF, fazione, rarità, espansione, immagini della carta finita |
+| | `cards` | Le carte-creatura con codice, ATT, DIF, fazione, rarità, espansione, illustrazioni e ritaglio |
 | Collezione e mazzi | `user_cards` | Le carte possedute da ogni utente, con il numero di copie (e quante full art) |
 | | `decks` | I mazzi degli utenti |
 | | `deck_cards` | Le carte di ogni mazzo |
@@ -44,13 +46,14 @@
 | | `pack_slot_rarities` | Le rarità possibili in ogni slot, con il loro peso |
 | | `pack_openings` | Ogni apertura di un pacchetto, comprato o regalato |
 | | `pack_opening_cards` | Le carte uscite da ogni apertura |
-| Scambi | `trades` | Le proposte di scambio e il loro stato |
+| Amici e scambi | `friendships` | La lista amici: richieste in attesa e amicizie accettate |
+| | `trades` | Le proposte di scambio tra amici e il loro stato |
 | | `trade_items` | Le carte offerte e richieste in ogni scambio |
 | Sfide | `challenges` | Le sfide tra utenti e il loro stato |
 | | `matches` | Il risultato della partita simulata, round per round |
 | Crediti | `credit_transactions` | Ogni movimento di crediti, con il motivo |
 | Modalità ed effetti | `game_modes` | Le modalità di gioco con i loro valori (punti vita, limite di round) |
-| | `effects` | Il catalogo degli effetti della modalità Effetti |
+| | `effects` | Il catalogo degli effetti (lista di Nicolas), validi in ogni partita |
 | | `card_effects` | Quali effetti ha ogni carta, con il loro valore |
 | Contatti | `contact_messages` | I messaggi inviati dal form della pagina Contatti |
 
@@ -80,7 +83,7 @@ erDiagram
     factions ||--o{ faction_advantages : "debole contro"
 
     users {
-        bigint id PK
+        uuid id PK
         varchar username UK
         varchar email UK
         varchar password_hash
@@ -88,89 +91,94 @@ erDiagram
         int credits "saldo, mai negativo"
         int rating "rank, parte da 1000"
         boolean is_enabled
-        datetime privacy_accepted_at
-        datetime terms_accepted_at
+        timestamptz privacy_accepted_at
+        timestamptz terms_accepted_at
     }
     contact_messages {
-        bigint id PK
-        bigint user_id FK "NULL = visitatore"
+        uuid id PK
+        uuid user_id FK "NULL = visitatore"
         varchar name
         varchar email
         text message
         varchar status "NEW, READ, ARCHIVED"
     }
     refresh_tokens {
-        bigint id PK
-        bigint user_id FK
+        uuid id PK
+        uuid user_id FK
         char token_hash UK
-        datetime expires_at
-        datetime revoked_at
+        timestamptz expires_at
+        timestamptz revoked_at
     }
     password_reset_tokens {
-        bigint id PK
-        bigint user_id FK
+        uuid id PK
+        uuid user_id FK
         char token_hash UK
-        datetime expires_at
-        datetime used_at
+        timestamptz expires_at
+        timestamptz used_at
     }
     factions {
-        bigint id PK
+        uuid id PK
         varchar code UK
         varchar name UK
         varchar lord_title "es. Dreams Lord"
-        bigint lord_card_id FK, UK
+        uuid lord_card_id FK, UK
     }
     faction_advantages {
-        bigint id PK
-        bigint faction_id FK "fazione forte"
-        bigint target_faction_id FK "fazione debole"
+        uuid id PK
+        uuid faction_id FK "fazione forte"
+        uuid target_faction_id FK "fazione debole"
         int attack_bonus
         int defense_bonus
     }
     rarities {
-        bigint id PK
+        uuid id PK
         varchar code UK
         int sort_order UK
         int max_per_deck "NULL = nessun limite"
         int max_copies "copie della stessa carta"
     }
     card_sets {
-        bigint id PK
+        uuid id PK
         varchar code UK "BASE, EXP1, ..."
         varchar name UK
         date released_at
         boolean is_active
     }
     cards {
-        bigint id PK
+        uuid id PK
         varchar code UK "es. BASE-001"
         varchar name UK
         int attack "almeno 1"
         int defense "almeno 1"
-        bigint faction_id FK
-        bigint rarity_id FK
-        bigint card_set_id FK
-        varchar image_url "carta finita"
-        varchar full_art_image_url "solo Leggendarie"
+        uuid faction_id FK
+        uuid rarity_id FK
+        uuid card_set_id FK
+        varchar illustration_url "3:2, WebP grande"
+        varchar illustration_thumb_url "miniatura"
+        numeric illustration_focus_y "ritaglio"
+        varchar full_art_illustration_url "2:3, solo Leggendarie"
+        varchar full_art_thumb_url "miniatura"
+        numeric full_art_focus_y
         boolean is_active
     }
     user_cards {
-        bigint id PK
-        bigint user_id FK
-        bigint card_id FK
+        uuid id PK
+        uuid user_id FK
+        uuid card_id FK
         int quantity "tutte le copie"
         int full_art_quantity "di cui full art"
     }
     decks {
-        bigint id PK
-        bigint user_id FK
+        uuid id PK
+        uuid user_id FK
         varchar name
     }
     deck_cards {
-        bigint id PK
-        bigint deck_id FK
-        bigint card_id FK
+        uuid id PK
+        uuid deck_id FK
+        uuid card_id FK
         int quantity
+        boolean is_full_art "mostra la full art"
     }
 ```
 
@@ -194,56 +202,56 @@ erDiagram
     matches |o--o{ credit_transactions : "premio"
 
     packs {
-        bigint id PK
+        uuid id PK
         varchar name UK
         varchar pack_type "SHOP, STARTER, WELCOME"
         int price_credits "0 se non in vendita"
-        bigint card_set_id FK "NULL = tutte le espansioni"
-        decimal full_art_chance "percentuale"
+        uuid card_set_id FK "NULL = tutte le espansioni"
+        numeric full_art_chance "percentuale"
         boolean is_active
     }
     pack_covers {
-        bigint id PK
-        bigint pack_id FK
-        bigint faction_id FK
+        uuid id PK
+        uuid pack_id FK
+        uuid faction_id FK
         varchar name
         varchar image_url
     }
     pack_slots {
-        bigint id PK
-        bigint pack_id FK
+        uuid id PK
+        uuid pack_id FK
         int sort_order
         int card_count
     }
     pack_slot_rarities {
-        bigint id PK
-        bigint pack_slot_id FK
-        bigint rarity_id FK
+        uuid id PK
+        uuid pack_slot_id FK
+        uuid rarity_id FK
         int weight
     }
     pack_openings {
-        bigint id PK
-        bigint user_id FK
-        bigint pack_id FK
-        bigint pack_cover_id FK
+        uuid id PK
+        uuid user_id FK
+        uuid pack_id FK
+        uuid pack_cover_id FK
         varchar source "PURCHASE, SIGNUP"
         int price_paid
-        datetime opened_at
+        timestamptz opened_at
     }
     pack_opening_cards {
-        bigint id PK
-        bigint pack_opening_id FK
-        bigint card_id FK
+        uuid id PK
+        uuid pack_opening_id FK
+        uuid card_id FK
         boolean is_full_art
     }
     credit_transactions {
-        bigint id PK
-        bigint user_id FK
+        uuid id PK
+        uuid user_id FK
         varchar type
         int amount "positivo o negativo"
         int balance_after
-        bigint pack_opening_id FK
-        bigint match_id FK
+        uuid pack_opening_id FK
+        uuid match_id FK
     }
 ```
 
@@ -251,6 +259,8 @@ erDiagram
 
 ```mermaid
 erDiagram
+    users ||--o{ friendships : "chiede amicizia"
+    users ||--o{ friendships : "riceve richiesta"
     users ||--o{ trades : "propone"
     users ||--o{ trades : "riceve"
     trades ||--|{ trade_items : "contiene"
@@ -262,34 +272,41 @@ erDiagram
     challenges ||--o| matches : "produce"
     users |o--o{ matches : "vince"
 
+    friendships {
+        uuid id PK
+        uuid requester_id FK
+        uuid addressee_id FK
+        varchar status "PENDING, ACCEPTED"
+        timestamptz accepted_at
+    }
     trades {
-        bigint id PK
-        bigint proposer_id FK
-        bigint recipient_id FK
+        uuid id PK
+        uuid proposer_id FK
+        uuid recipient_id FK
         varchar status "PENDING, ACCEPTED, REJECTED, CANCELLED"
-        datetime resolved_at
+        timestamptz resolved_at
     }
     trade_items {
-        bigint id PK
-        bigint trade_id FK
-        bigint card_id FK
+        uuid id PK
+        uuid trade_id FK
+        uuid card_id FK
         varchar side "OFFERED, REQUESTED"
         boolean is_full_art
         int quantity
     }
     challenges {
-        bigint id PK
-        bigint challenger_id FK
-        bigint opponent_id FK
-        bigint challenger_deck_id FK
-        bigint opponent_deck_id FK
-        bigint game_mode_id FK "default BASE"
+        uuid id PK
+        uuid challenger_id FK
+        uuid opponent_id FK
+        uuid challenger_deck_id FK
+        uuid opponent_deck_id FK
+        uuid game_mode_id FK "default BASE"
         varchar status "PENDING, REJECTED, CANCELLED, COMPLETED"
     }
     matches {
-        bigint id PK
-        bigint challenge_id FK, UK
-        bigint winner_id FK "NULL = pareggio"
+        uuid id PK
+        uuid challenge_id FK, UK
+        uuid winner_id FK "NULL = pareggio"
         varchar end_reason "LIFE_POINTS, DECK_EXHAUSTED, ROUND_LIMIT"
         int total_rounds
         int starting_life_points
@@ -297,9 +314,9 @@ erDiagram
         int challenger_rating_change "NULL = non conta per il rank"
         int opponent_rating_change
         bigint random_seed
-        json challenger_deck_snapshot
-        json opponent_deck_snapshot
-        json round_log
+        jsonb challenger_deck_snapshot
+        jsonb opponent_deck_snapshot
+        jsonb round_log
     }
 ```
 
@@ -312,33 +329,32 @@ erDiagram
     effects ||--o{ card_effects : "assegnato a"
 
     game_modes {
-        bigint id PK
-        varchar code UK "BASE, EFFECTS"
+        uuid id PK
+        varchar code UK "BASE"
         varchar name
-        boolean effects_enabled "TRUE = il motore applica gli effetti"
         int starting_life_points "20"
         int round_limit "60"
         boolean is_active
     }
     effects {
-        bigint id PK
+        uuid id PK
         varchar code UK "collega l'effetto al codice Java"
         varchar name UK
         varchar description "testo per i giocatori, con {value}"
-        varchar trigger_event "ON_ENTER, BEFORE_COMBAT, ON_DEATH, END_OF_ROUND"
+        varchar trigger_event "ON_PLAY, WHILE_IN_PLAY, END_OF_ROUND, ON_DEATH, ON_KILL"
     }
     card_effects {
-        bigint id PK
-        bigint card_id FK
-        bigint effect_id FK
+        uuid id PK
+        uuid card_id FK
+        uuid effect_id FK
         int effect_value "NULL se l'effetto non ha un numero"
     }
     challenges {
-        bigint id PK
-        bigint game_mode_id FK
+        uuid id PK
+        uuid game_mode_id FK
     }
     cards {
-        bigint id PK
+        uuid id PK
         varchar name UK
     }
 ```
@@ -357,7 +373,9 @@ erDiagram
 | **Punteggio di rank già nello schema** (`users.rating`, `matches.*_rating_change`) | Il rank si fa dopo le funzionalità obbligatorie, ma le colonne ci sono già: quando si attiva non serve toccare le tabelle. Finché il rank è spento, `rating` resta 1000 e le variazioni restano `NULL`. Le leghe (Dormiente, Sognatore, Lucido, Dreamweaver) si calcolano dal punteggio, non si salvano. |
 | **Consensi alla registrazione** (`privacy_accepted_at`, `terms_accepted_at`) | La registrazione ha la checkbox di Privacy Policy e Termini di servizio: si salva quando sono stati accettati. Un `CHECK` li rende obbligatori per i giocatori; l'admin, creato all'avvio, non passa dalla registrazione. |
 | **Messaggi dei contatti in tabella** (`contact_messages`) | Il form della pagina Contatti salva il messaggio e l'admin lo legge nel backoffice. Non serve configurare l'invio di email. |
-| **Utenti si disattivano, non si cancellano** (`is_enabled`) | Lo storico di sfide e scambi resta completo. Le chiavi esterne di `trades` e `challenges` verso `users` non hanno `ON DELETE CASCADE` anche per un limite di MySQL: non è permesso su colonne usate in un `CHECK`. |
+| **Accesso con token JWT** (`refresh_tokens`) | Il token di accesso dura poco e non si salva. Il refresh token serve a ottenerne uno nuovo: si salva come hash e si revoca al logout (`revoked_at`). Il frontend in HTML/CSS/JavaScript manda il token nell'header `Authorization`. |
+| **Username ed email senza distinguere maiuscole** (indici `UNIQUE` su `LOWER()`) | "Marco" e "marco" sono lo stesso utente. In PostgreSQL si ottiene con un indice sull'espressione, senza colonne in più. |
+| **Utenti si disattivano, non si cancellano** (`is_enabled`) | Lo storico di sfide e scambi resta completo. Per questo le chiavi esterne di `trades` e `challenges` verso `users` non hanno `ON DELETE CASCADE`. |
 
 ### Catalogo delle carte
 
@@ -367,10 +385,13 @@ erDiagram
 | **Lord di fazione** (`factions.lord_title`, `factions.lord_card_id`) | Ogni fazione è rappresentata da una sua Leggendaria: Dreams Lord, Nightmares Lord, Memories Lord. Sono solo titolo e immagine (pagina della fazione, copertine dei pacchetti), senza regole di gioco in più. |
 | **Limiti per TIER in `rarities`**: `max_per_deck` e `max_copies` | Il regolamento ha limiti per rarità (Leggendarie 2, Epiche 4, Rare 8, Comuni libere) e copie che dipendono dalla rarità (2, ma 1 per le Leggendarie). Stando in tabella si ribilanciano senza toccare il codice. |
 | **Codice stabile per ogni carta** (`cards.code`, es. `BASE-001`) | Le migration con i dati e i nomi dei file immagine usano il codice, che non cambia se si corregge il nome della carta. |
-| **Si salva la carta finita** (`image_url`, `full_art_image_url`) | Le carte sono immagini già pronte: illustrazione dal generatore di immagini, poi cornice, nome, statistiche e testi aggiunti dal compositore (`carte/compositore`). Il frontend le mostra così come sono. Le 12 carte e le 3 full art del set di prova sono già in questo formato e possono diventare le prime carte del catalogo. |
-| **`carte.csv` è la fonte unica del catalogo** | ATT, DIF e testi sono stampati sull'immagine, quindi devono coincidere con il database. Se cambia una carta: si modifica `carte.csv`, il compositore ricompone l'immagine e si scrive la migration con i nuovi valori. Così immagine e dati cambiano insieme. |
+| **La carta la monta il frontend** con un componente JavaScript (frontend in HTML, CSS e JavaScript, es. una funzione `drawCard`) | Il componente riceve i dati della carta e l'illustrazione e monta: illustrazione con il suo ritaglio, cornice della fazione e della rarità con la finestra trasparente, simbolo, nome, testi, ATT e DIF. Se cambia una statistica o un testo, la carta si aggiorna da sola: nessuna immagine da ricomporre. Le 15 carte del set di prova sono il riferimento visivo. |
+| **Nel database solo illustrazione e ritaglio** (`illustration_url`, `illustration_thumb_url`, `illustration_focus_y` e le stesse per la full art) | L'illustrazione è l'unica parte diversa per ogni carta. Cornici, simboli, coordinate delle zone e font sono uguali per tutte e stanno nel frontend. Il ritaglio lo fa il JavaScript, ma solo il database sa dove sta il soggetto di ogni immagine: per questo il numero è nella carta (0,40 per quasi tutte, 0,27 per Il Sogno Lucido). Il ritaglio è lo stesso del compositore: niente zoom, solo spostamento verticale. |
+| **Originali intatti, al browser copie WebP** (`*_url` = grande, `*_thumb_url` = miniatura) | I PNG originali pesano 2,5–3,3 MB: con le 12 carte di oggi la prima visita alla collezione scaricherebbe circa 55 MB tra illustrazioni e cornici. L'originale resta com'è, con i suoi metadati, e non si serve al browser. Il backend serve due copie WebP: grande (larghezza 1024 px, circa 120–350 KB) per il dettaglio della carta e l'apertura dei pacchetti, miniatura (larghezza 400 px, circa 25–80 KB) per le griglie. Con le miniature la collezione scende sotto 1 MB. Due colonne in più evitano regole sul nome del file da ricordare nel frontend. |
+| **Immagini in cache per sempre** (versione nel nome del file) | Ogni file ha un numero di versione, es. `base-004-v1.webp`. Il backend serve `/images/**` con `Cache-Control: public, max-age=31536000, immutable`: il browser scarica ogni immagine una volta sola. Se un'illustrazione cambia, la nuova ha un nome nuovo (`base-004-v2.webp`) e il browser la scarica perché l'URL è diverso. La carta montata non si salva: il JavaScript la rimonta a ogni pagina in pochi millisecondi, con le immagini già in cache. |
+| **Illustrazioni servite dal backend** | Quelle del catalogo ufficiale stanno nel repository, quelle caricate dal backoffice in un volume Docker. Gli originali restano PNG senza conversioni, così i loro metadati non si perdono; le copie WebP sono file a parte. |
 | **Full art come copia rara della stessa carta** (`user_cards.full_art_quantity`) | Solo le Leggendarie hanno la full art. Quando esce una Leggendaria da un pacchetto c'è una piccola probabilità (`packs.full_art_chance`, es. 5%) che sia full art. In partita è la stessa carta: stesse statistiche, conta per gli stessi limiti di copie. Cambia solo l'immagine, in collezione e negli scambi. |
-| **Attacco e difesa almeno 1** (`CHECK`) | Con attacco almeno 1 ogni round toglie difesa e la partita Base finisce sempre da sola (regolamento, punto 14.3). |
+| **Attacco e difesa almeno 1** (`CHECK`) | Con attacco almeno 1 ogni round toglie difesa; insieme al limite di round, la partita finisce sempre. |
 | **Espansioni** (`card_sets`) con pacchetti legati a un'espansione (`packs.card_set_id`) | Permette pacchetti che contengono solo le carte nuove. Con `card_set_id = NULL` il pacchetto pesca da tutte le espansioni. |
 | **Carte e pacchetti si disattivano, non si cancellano** (`is_active`) | Restano collegati a collezioni, mazzi e storico. |
 
@@ -383,25 +404,30 @@ erDiagram
 | **Slot con rarità pesate** (`pack_slots` + `pack_slot_rarities`) | Uno slot può dare rarità diverse con probabilità diverse (es. Epica peso 90, Leggendaria peso 10). Uno slot con una sola rarità dà sempre quella: così si fa anche l'Epica garantita del benvenuto. Dentro una rarità la carta si estrae a caso tra quelle attive. |
 | **Copertine dei pacchetti** (`pack_covers`) | Stesso contenuto, immagine diversa: il pacchetto base ha tre copertine, una per ogni Lord. Il giocatore sceglie quella che preferisce e la scelta resta nell'apertura (`pack_openings.pack_cover_id`). |
 | **Apertura immediata** (`pack_openings`, con `source`) | L'utente compra e apre subito il pacchetto: un solo passaggio, un solo record. `source` distingue i pacchetti comprati da quelli regalati alla registrazione; `price_paid` conserva il prezzo anche se poi cambia. |
+| **Lista amici** (`friendships`) | A manda la richiesta, B la accetta. Una sola riga per coppia, in qualunque direzione (indice su `LEAST`/`GREATEST`). Un rifiuto o la rimozione dell'amicizia cancellano la riga. |
+| **Scambi solo tra amici, senza limiti di valore** | Si propone uno scambio solo a un amico. Quantità e rarità sono libere (es. 1 Epica per 5 Comuni): nessun controllo di equilibrio, decide il destinatario accettando o rifiutando. |
 | **Full art negli scambi** (`trade_items.is_full_art`) | Una copia full art vale di più: nello scambio si dice se si offrono copie normali o full art. |
 
 ### Partite e modalità
 
 | Scelta | Perché |
 |--------|--------|
-| **Modalità in tabella con i loro valori** (`game_modes`: `starting_life_points`, `round_limit`) | Il brief chiede modalità "separate e attivabili": `is_active` le accende e spegne dal backoffice. Un formato futuro che cambia solo i numeri (es. Construct o Grinder) è una riga nuova. Carte per mazzo e copie restano uguali per tutte le modalità, così un mazzo valido si usa ovunque. |
+| **Modalità in tabella con i loro valori** (`game_modes`: `starting_life_points`, `round_limit`) | Oggi c'è una sola modalità, ma un formato futuro che cambia solo i numeri (es. più o meno punti vita) è una riga nuova, accesa e spenta dal backoffice con `is_active`. Carte per mazzo e copie restano uguali per tutte le modalità, così un mazzo valido si usa ovunque. |
 | **Carte per mazzo fisse nella configurazione** (`game.deck-size=20`), non in tabella | Cambiarle renderebbe non validi tutti i mazzi salvati. La pagina Configurazione del backoffice le mostra in sola lettura, e la pagina pubblica del Regolamento le legge dalla stessa API. |
-| **Due modalità previste: BASE ed EFFECTS** | BASE viene inserita insieme alla tabella e non si disattiva mai. EFFECTS nasce spenta e si accende quando il motore la supporta. |
+| **Una sola modalità: BASE con gli effetti** | Il brief aggiornato permette di modificare la modalità Base: gli effetti delle carte ne fanno parte e valgono in ogni partita. BASE viene inserita insieme alla tabella e non si disattiva mai. |
 | **Copia dei valori della partita in `matches`** (`starting_life_points`, `round_limit`) | Se i valori di una modalità cambiano, lo storico mostra comunque le regole con cui si è giocato. |
-| **Copie dei mazzi in `matches`** (JSON) | Lo storico resta corretto anche se l'utente modifica o cancella il mazzo, o scambia le carte, dopo la partita. |
-| **Log round per round come JSON** (`round_log`) | Si legge sempre tutto insieme, non serve interrogare i singoli round. Una tabella dei round si può aggiungere in futuro se servisse. |
-| **`random_seed` in `matches`** | Con lo stesso seed il motore rigioca la stessa identica partita: utile per verifiche e test. Decide anche il lancio della moneta della modalità Effetti, che si legge nel log. |
+| **Copie dei mazzi in `matches`** (JSONB) | Lo storico resta corretto anche se l'utente modifica o cancella il mazzo, o scambia le carte, dopo la partita. |
+| **Log round per round come JSONB** (`round_log`) | Si legge sempre tutto insieme, non serve interrogare i singoli round. Una tabella dei round si può aggiungere in futuro se servisse. |
+| **`random_seed` in `matches`** | Con lo stesso seed il motore rigioca la stessa identica partita: utile per verifiche e test. Decide anche il lancio della moneta per l'ordine degli effetti, che si legge nel log. |
 | **Stati e tipi come `VARCHAR` + `CHECK`** invece di `ENUM` | Si mappano facilmente su enum Java. Aggiungere un valore richiede solo una migration che aggiorna il `CHECK`. |
-| **Effetti separati dalle carte** (catalogo + tabella di collegamento) | Lo stesso effetto si riusa su più carte con valori diversi, come prevede il catalogo di circa 20 effetti fissi del regolamento. |
-| **Momenti degli effetti = fasi del round** (`ON_ENTER`, `BEFORE_COMBAT`, `ON_DEATH`, `END_OF_ROUND`) | Sono i quattro momenti del regolamento: fase iniziale, prima del calcolo dei danni, fase finale per le creature morte e per quelle vive. |
+| **Effetti separati dalle carte** (catalogo + tabella di collegamento) | Lo stesso effetto si riusa su più carte con valori diversi, come prevede la lista di keyword di Nicolas (es. Protezione X, Castigo X). |
+| **Momenti degli effetti** (`ON_PLAY`, `WHILE_IN_PLAY`, `END_OF_ROUND`, `ON_DEATH`, `ON_KILL`) | Sono i momenti della lista di Nicolas: quando la carta viene giocata, finché resta in campo, alla fine di ogni round, quando viene uccisa, quando uccide. |
 | **Il comportamento dell'effetto sta nel codice Java**, il database salva solo `code`, momento e valore | Gli effetti sono molto diversi tra loro: descriverli tutti con colonne sarebbe rigido. Il motore associa ogni `code` alla sua classe Java. |
-| **Gli effetti valgono solo se `game_modes.effects_enabled = TRUE`** | La modalità BASE deve restare sempre uguale e verificabile, come chiede il brief. |
-| **`id BIGINT AUTO_INCREMENT` su ogni tabella**, anche quelle di relazione | Una regola sola per tutti. Con JPA evita le chiavi composte. L'unicità reale è garantita dai vincoli `UNIQUE`. |
+| **`id UUID` v7 su ogni tabella**, anche quelle di relazione (`DEFAULT uuidv7()`) | Una regola sola per tutti. Gli id finiscono negli URL e nelle API (`/sfide/{id}`): un UUID non si indovina, un numero sì. La versione 7 è ordinata nel tempo, quindi gli indici restano efficienti. In Java il campo è `java.util.UUID`; con JPA evita le chiavi composte. L'unicità reale è garantita dai vincoli `UNIQUE`. |
+| **UUID generati da Hibernate** (Spring Boot 4, `@UuidGenerator(style = UuidGenerator.Style.VERSION_7)`) | L'id esiste già prima del salvataggio: niente riletture dopo l'insert, entità più semplici da testare. Il `DEFAULT uuidv7()` resta nel database per le migration con i dati e per chi scrive SQL a mano. |
+| **Indici sulle chiavi esterne usate nelle ricerche** | PostgreSQL non li crea da solo. Ci sono dove serve: es. `refresh_tokens.user_id` (logout ovunque) e `pack_opening_cards.pack_opening_id` (pagina dell'apertura). Le altre chiavi esterne sono già coperte da un vincolo `UNIQUE` che inizia con quella colonna, o stanno su tabelle piccole. |
+| **Date in `TIMESTAMPTZ`, in UTC** | Nessun dubbio sul fuso orario: conta per la ricompensa giornaliera e per le partite del giorno che valgono per il rank. |
+| **`updated_at` aggiornato da JPA** (`@UpdateTimestamp`) | PostgreSQL non ha `ON UPDATE CURRENT_TIMESTAMP`: lo fa Hibernate a ogni salvataggio, senza trigger. |
 
 ---
 
@@ -414,7 +440,7 @@ Queste regole stanno nei **service** del backend, sempre dentro una transazione 
 Prima di tutto controlla che l'utente abbia accettato Privacy Policy e Termini di servizio e salva le due date (`privacy_accepted_at`, `terms_accepted_at`).
 
 Nella stessa transazione che crea l'utente:
-1. Apre il pacchetto **STARTER** (set iniziale: 14 Comuni e 6 Rare estratte dalla pool).
+1. Apre il pacchetto **STARTER** (set iniziale: 14 Comuni e 6 Rare estratte a caso). Solo per questo pacchetto l'estrazione **non supera le copie massime per carta** (`rarities.max_copies`): una carta che ha già 2 copie si toglie dall'estrazione. Così le 20 carte formano sempre un mazzo valido. Il mazzo non si crea in automatico: lo compone il giocatore nell'editor.
 2. Apre i due pacchetti **WELCOME**: uno dei due ha uno slot con l'Epica garantita.
 3. Scrive le aperture con `source = 'SIGNUP'` e `price_paid = 0` e aggiorna `user_cards`. Nessun movimento di crediti.
 4. Se si decide un bonus di crediti iniziale, scrive anche `credit_transactions` con `type = 'SIGNUP_BONUS'`.
@@ -427,7 +453,10 @@ Al salvataggio di un mazzo il service verifica:
 - esattamente 20 carte (valore nella configurazione, uguale per tutte le modalità);
 - copie massime per carta secondo la rarità (`rarities.max_copies`);
 - limite per TIER (`rarities.max_per_deck`);
-- l'utente possiede abbastanza copie di ogni carta (`user_cards.quantity`, full art comprese).
+- l'utente possiede abbastanza copie di ogni carta (`user_cards.quantity`, full art comprese);
+- `is_full_art = TRUE` solo se la carta ha una full art e l'utente ne possiede almeno una copia (`user_cards.full_art_quantity >= 1`). Il database controlla già che la riga abbia `quantity = 1` (`chk_deck_cards_full_art`).
+
+La full art nel mazzo è solo una scelta di aspetto: si vede nell'editor, nella lista dei mazzi e in partita, e finisce nella copia del mazzo salvata in `matches` (`isFullArt`).
 
 Un mazzo può diventare non valido dopo, se l'utente scambia carte che ci stavano dentro. Per questo il mazzo si **ricontrolla quando si invia o si accetta una sfida**.
 
@@ -451,28 +480,38 @@ Dal backoffice un pacchetto si può attivare solo se, per ogni rarità usata nei
 
 ### Catalogo
 
-- `full_art_image_url` si può impostare solo su carte Leggendarie.
-- Se dal backoffice cambiano ATT, DIF, nome o testi di una carta, va caricata anche l'immagine ricomposta: il form non salva le nuove statistiche senza la nuova immagine.
+- `full_art_illustration_url` si può impostare solo su carte Leggendarie.
+- Le illustrazioni caricate dal backoffice si salvano così come sono (PNG), senza conversioni che toglierebbero i metadati. Il backend crea anche le due copie WebP (grande e miniatura) e salva i loro URL nella carta: `illustration_url` e `illustration_thumb_url` si impostano sempre insieme (lo controlla anche `chk_cards_thumbs`).
+- Una nuova illustrazione per una carta che ne ha già una prende la versione successiva nel nome (`-v2`, `-v3`...). Un file già pubblicato non si sovrascrive mai, altrimenti i browser continuerebbero a mostrare quello vecchio dalla cache.
 - `factions.lord_card_id` deve essere una Leggendaria della stessa fazione.
 - Una carta ha al massimo un effetto, come prevede il regolamento attuale.
 
+### Amici
+
+- **Richiesta:** A cerca B per username e manda la richiesta (`status = 'PENDING'`). Non si può chiedere l'amicizia a se stessi né a chi è già amico o ha già una richiesta in sospeso. Se B aveva già chiesto l'amicizia ad A, la richiesta di A la accetta subito.
+- **Risposta:** solo B (`addressee_id`) può accettare (`status = 'ACCEPTED'`, `accepted_at`) o rifiutare (la riga si cancella).
+- **Rimozione:** uno dei due toglie l'amicizia e la riga si cancella. Gli scambi già conclusi restano nello storico.
+
 ### Scambi
 
+Quando si propone uno scambio, proponente e destinatario devono essere amici (`friendships` con `status = 'ACCEPTED'`). Quantità e rarità sono libere: si può offrire 1 Epica per 5 Comuni.
+
 Quando il destinatario accetta:
-1. Blocca le righe di `user_cards` coinvolte (`SELECT ... FOR UPDATE`).
-2. Ricontrolla che entrambi abbiano ancora tutte le carte nelle quantità previste, contando a parte le copie full art (`is_full_art`).
-3. Sposta le carte: scala `quantity` (e `full_art_quantity` per le full art), cancella le righe che arrivano a 0, aggiunge o incrementa quelle del ricevente.
-4. Imposta `status = 'ACCEPTED'` e `resolved_at`.
+1. Ricontrolla che siano ancora amici.
+2. Blocca le righe di `user_cards` coinvolte (`SELECT ... FOR UPDATE`).
+3. Ricontrolla che entrambi abbiano ancora tutte le carte nelle quantità previste, contando a parte le copie full art (`is_full_art`).
+4. Sposta le carte: scala `quantity` (e `full_art_quantity` per le full art), cancella le righe che arrivano a 0, aggiunge o incrementa quelle del ricevente.
+5. Imposta `status = 'ACCEPTED'` e `resolved_at`.
 
 Se un controllo fallisce, la transazione si annulla e nessuna carta si muove. Ogni scambio deve avere almeno una carta per lato.
 
 ### Sfide
 
-All'invio della sfida si controlla che la modalità scelta sia attiva (`game_modes.is_active`).
+Si può sfidare qualunque Dreamweaver, non solo gli amici. All'invio della sfida si controlla che la modalità sia attiva (`game_modes.is_active`).
 
 Quando lo sfidato accetta:
 1. Ricontrolla la validità di entrambi i mazzi.
-2. Genera il seed e chiama il motore di gioco con i valori della modalità (punti vita, limite di round). Gli passa gli effetti delle carte (`card_effects`) **solo se** la modalità ha `effects_enabled = TRUE`.
+2. Genera il seed e chiama il motore di gioco con i valori della modalità (punti vita, limite di round). Gli passa sempre anche gli effetti delle carte (`card_effects`).
 3. Salva il risultato in `matches`, con la copia dei valori della modalità.
 4. Se il rank è attivo e la partita conta (solo le prime partite del giorno contro lo stesso avversario), calcola le variazioni di punteggio, aggiorna `users.rating` e salva `*_rating_change`.
 5. Imposta `status = 'COMPLETED'`.
@@ -495,43 +534,46 @@ Proposta da concordare con chi sviluppa il motore di gioco. I nomi seguono il re
 
 ```json
 {
-  "deckId": 12,
+  "deckId": "019a2a10-1b2c-7d3e-8f40-a1b2c3d4e5f6",
   "deckName": "Mazzo offensivo",
   "cards": [
     {
-      "cardId": 6, "cardCode": "BASE-006", "name": "La Caduta Senza Fine", "attack": 7, "defense": 3,
-      "faction": "NIGHTMARES", "rarity": "RARE", "quantity": 2,
-      "effects": [ { "code": "DESPERATION", "triggerEvent": "BEFORE_COMBAT", "value": 2 } ]
+      "cardId": "019a1f30-0000-7000-8000-000000000008", "cardCode": "BASE-008", "name": "L'Uomo Senza Volto", "attack": 8, "defense": 5,
+      "faction": "NIGHTMARES", "rarity": "LEGENDARY", "quantity": 1, "isFullArt": true,
+      "effects": [ { "code": "WEAKENING", "name": "Indebolimento", "triggerEvent": "WHILE_IN_PLAY", "value": 2 } ]
     }
   ]
 }
 ```
 
-Nella modalità BASE `effects` è sempre una lista vuota.
+Ogni carta ha al massimo un effetto: `effects` è una lista vuota se la carta non ne ha. `isFullArt` dice se nel replay della partita si mostra la full art.
 
 **`round_log`**
 
 ```json
 {
-  "coinTossWinner": null,
+  "coinTossWinner": "OPPONENT",
   "rounds": [
     {
       "round": 3,
       "clash": 2,
-      "challengerCard": { "cardId": 1, "attack": 2, "factionBonus": 0, "defenseBefore": 2, "defenseAfter": -6 },
-      "opponentCard":   { "cardId": 6, "attack": 7, "factionBonus": 1, "defenseBefore": 3, "defenseAfter": 1 },
+      "challengerCard": { "cardId": "019a1f30-0000-7000-8000-000000000003", "attack": 4, "attackModifier": -2, "factionBonus": 0, "defenseBefore": 7, "defenseAfter": -2 },
+      "opponentCard":   { "cardId": "019a1f30-0000-7000-8000-000000000008", "attack": 8, "attackModifier": 0, "factionBonus": 1, "defenseBefore": 5, "defenseAfter": 3 },
       "outcome": "CHALLENGER_CARD_DIED",
-      "triggeredEffects": [],
-      "damageToPlayer": { "challenger": 6, "opponent": 0 },
-      "lifePointsAfter": { "challenger": 14, "opponent": 19 }
+      "triggeredEffects": [
+        { "cardId": "019a1f30-0000-7000-8000-000000000008", "code": "WEAKENING", "text": "Indebolimento 2: l'attacco del Faro nella Nebbia scende da 4 a 2" }
+      ],
+      "damageToPlayer": { "challenger": 2, "opponent": 0 },
+      "lifePointsAfter": { "challenger": 18, "opponent": 20 }
     }
   ]
 }
 ```
 
-- `coinTossWinner`: `CHALLENGER` o `OPPONENT` nella modalità Effetti (decide l'ordine degli effetti), `null` nella Base.
+- `coinTossWinner`: `CHALLENGER` o `OPPONENT`. La moneta si tira prima della partita e decide l'ordine quando due effetti scattano nello stesso momento.
 - `outcome`: `NONE_DIED`, `CHALLENGER_CARD_DIED`, `OPPONENT_CARD_DIED`, `BOTH_DIED`.
-- L'esempio è il round 3 della partita di esempio del regolamento: la Caduta (7 + 1 di bonus) uccide il Rifugio, che aveva difesa 2, e il giocatore subisce 8 − 2 = 6 danni.
+- `attackModifier`: quanto gli effetti cambiano l'attacco in quel round.
+- L'esempio è il round 3 della partita di esempio del regolamento: l'Uomo Senza Volto (8 + 1 di bonus) uccide il Faro nella Nebbia, che aveva difesa 7, e il giocatore subisce 9 − 7 = 2 danni.
 
 ---
 
@@ -543,7 +585,7 @@ Nella modalità BASE `effects` è sempre una lista vuota.
 - Nome dei file: `V<numero>__<descrizione_in_snake_case>.sql`, con **due** underscore.
 - Una migration già applicata **non si modifica mai**. Per cambiare qualcosa se ne crea una nuova.
 
-✅ `V8__add_card_type_to_cards.sql`
+✅ `V9__add_card_type_to_cards.sql`
 ❌ modificare `V2__create_card_catalog.sql` dopo che è stato eseguito
 
 ### Divisione proposta
@@ -554,8 +596,8 @@ Nella modalità BASE `effects` è sempre una lista vuota.
 | `V2__create_card_catalog.sql` | `factions`, `faction_advantages`, `rarities`, `card_sets`, `cards` (+ chiave esterna del Lord), `effects`, `card_effects` |
 | `V3__create_collections_and_decks.sql` | `user_cards`, `decks`, `deck_cards` |
 | `V4__create_packs.sql` | `packs`, `pack_covers`, `pack_slots`, `pack_slot_rarities`, `pack_openings`, `pack_opening_cards` |
-| `V5__create_trades.sql` | `trades`, `trade_items` |
-| `V6__create_game_modes_challenges_and_matches.sql` | `game_modes` (+ righe BASE ed EFFECTS), `challenges`, `matches` |
+| `V5__create_friendships_and_trades.sql` | `friendships`, `trades`, `trade_items` |
+| `V6__create_game_modes_challenges_and_matches.sql` | `game_modes` (+ riga BASE), `challenges`, `matches` |
 | `V7__create_credit_transactions.sql` | `credit_transactions` |
 | `V8__create_contact_messages.sql` | `contact_messages` |
 
@@ -565,14 +607,41 @@ L'ordine conta: ogni file crea tabelle che dipendono solo da quelle dei file pre
 
 Fazioni, rarità, espansioni, carte e pacchetti si caricano con migration separate, dopo le tabelle. Come organizzarle è spiegato in [Dati del catalogo ed espansioni](#dati-del-catalogo-ed-espansioni).
 
+### Dati finti per sviluppo e test
+
+Con le 12 carte di prova non si forma un mazzo valido (al massimo 18 carte). Per sviluppare mazzi, sfide e motore senza aspettare il catalogo definitivo, si usano **carte inventate** in una cartella a parte:
+
+| Cartella | Contenuto | Quando si esegue |
+|----------|-----------|------------------|
+| `db/migration/` | Tabelle (`V1`–`V8`) e catalogo vero (`V100` e successive) | Sempre: sviluppo, test, produzione |
+| `db/testdata/` | Circa 30 carte finte (es. 12 Comuni, 9 Rare, 6 Epiche, 3 Leggendarie), pacchetti e qualche utente di prova | Solo nel profilo `dev` e nei test |
+
+- Numerazione da `V900` in su (es. `V900__seed_test_cards.sql`), così non si scontra mai con le migration vere.
+- Codici con il prefisso `TEST-` (es. `TEST-001`) e l'espansione `TEST`: non si confondono con le carte vere.
+- Le illustrazioni finte possono restare vuote (`illustration_url` NULL): il frontend mostra un segnaposto.
+- Le password degli utenti di prova si scrivono già cifrate con BCrypt, mai in chiaro. Gli utenti e le password di prova sono elencati nel README del backend.
+- Quando arriva il catalogo vero, i dati finti restano solo per i test.
+
 ### Configurazione Spring Boot
 
 ```properties
+# application.properties (comune)
+spring.datasource.url=jdbc:postgresql://localhost:5432/dreamscape
 spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
 spring.jpa.hibernate.ddl-auto=validate
 ```
 
+```properties
+# application-dev.properties (profilo dev) e configurazione dei test
+spring.flyway.locations=classpath:db/migration,classpath:db/testdata
+```
+
+Utente e password del database arrivano da variabili d'ambiente, mai dal repository.
+
 Con `validate`, Hibernate **non** modifica il database: controlla solo che le entità corrispondano alle tabelle create da Flyway.
+
+Versioni: **Spring Boot 4** (con Hibernate 7, che genera gli UUID v7) e **PostgreSQL 18**. Prima di iniziare va controllato che la versione di Flyway inclusa in Spring Boot supporti PostgreSQL 18, e che PostgreSQL 18 ci sia anche su RDS per il deploy.
 
 ---
 
@@ -591,13 +660,13 @@ Non serve nessuno script esterno per avviare il progetto: Flyway carica tutto da
 
 ### Il database non si svuota
 
-I dati stanno nel volume Docker di MySQL e restano a ogni riavvio. Flyway esegue solo le migration nuove: quelle già applicate sono registrate nella tabella `flyway_schema_history`. Il database si azzera solo con `docker compose down -v`, e al riavvio successivo Flyway ricrea tabelle e catalogo da zero.
+I dati stanno nel volume Docker di PostgreSQL e restano a ogni riavvio. Flyway esegue solo le migration nuove: quelle già applicate sono registrate nella tabella `flyway_schema_history`. Il database si azzera solo con `docker compose down -v`, e al riavvio successivo Flyway ricrea tabelle e catalogo da zero.
 
 ### Numerazione delle migration
 
 | Numeri | Contenuto | Esempio |
 |--------|-----------|---------|
-| `V1`–`V99` | Struttura: tabelle, colonne, indici | `V8__add_card_type_to_cards.sql` |
+| `V1`–`V99` | Struttura: tabelle, colonne, indici | `V9__add_card_type_to_cards.sql` |
 | `V100`–`V199` | Catalogo ufficiale | `V100__seed_rules_data.sql`, `V101__seed_base_set.sql`, `V102__seed_packs.sql` |
 | ... | Ogni espansione nuova prosegue la numerazione | `V103__expansion_1.sql` |
 
@@ -606,7 +675,17 @@ Flyway esegue le migration in ordine di numero. Una migration già eseguita **no
 ### Convenzioni del catalogo
 
 - **Codice carta:** `<codice espansione>-<numero a 3 cifre>`, es. `BASE-001`, `EXP1-012`.
-- **Immagini:** la carta finita ha il nome del codice in minuscolo, es. `base-004.webp`, e la full art `base-004-fullart.webp`. Si ottengono dalle carte prodotte dal compositore (`carte/carte-finali`). Le immagini del catalogo ufficiale stanno nel repository; quelle caricate dal backoffice nel volume dei file caricati.
+- **Illustrazioni:** l'originale ha il nome del codice in minuscolo, es. `base-004.png`, e la full art `base-004-fullart.png`, come nella cartella `carte/illustrazioni`. Resta PNG, con i suoi metadati. Le copie servite al browser aggiungono la versione e, per la miniatura, `-thumb`:
+
+  | File | Esempio | Uso |
+  |------|---------|-----|
+  | Originale | `base-004.png` | Archivio, non servito |
+  | Grande | `/images/cards/base-004-v1.webp` | `illustration_url` |
+  | Miniatura | `/images/cards/base-004-v1-thumb.webp` | `illustration_thumb_url` |
+  | Full art grande e miniatura | `/images/cards/base-004-fullart-v1.webp`, `…-v1-thumb.webp` | `full_art_illustration_url`, `full_art_thumb_url` |
+
+  Quelle del catalogo ufficiale stanno nel repository; quelle caricate dal backoffice nel volume dei file caricati.
+- **Cornici e simboli:** file statici del frontend, uno per fazione e rarità, con la finestra trasparente e le coordinate delle zone (nome, simbolo, testi, ATT, DIF).
 - **Riferimenti tra tabelle nelle migration:** sempre tramite `code` (fazione, rarità, espansione, carta), mai tramite `id` scritti a mano.
 - **Il catalogo ufficiale cambia solo con le migration.** Se si crea dal backoffice una carta che poi viene inserita anche da una migration, Flyway fallisce sul codice duplicato.
 
@@ -636,9 +715,9 @@ JOIN factions t ON (f.code, t.code) IN (('DREAMS', 'MEMORIES'), ('MEMORIES', 'NI
 Dopo l'inserimento delle carte (`V101`), si collegano i Lord:
 
 ```sql
-UPDATE factions f JOIN cards c ON c.code = 'BASE-004' SET f.lord_card_id = c.id WHERE f.code = 'DREAMS';
-UPDATE factions f JOIN cards c ON c.code = 'BASE-008' SET f.lord_card_id = c.id WHERE f.code = 'NIGHTMARES';
-UPDATE factions f JOIN cards c ON c.code = 'BASE-012' SET f.lord_card_id = c.id WHERE f.code = 'MEMORIES';
+UPDATE factions f SET lord_card_id = c.id FROM cards c WHERE c.code = 'BASE-004' AND f.code = 'DREAMS';
+UPDATE factions f SET lord_card_id = c.id FROM cards c WHERE c.code = 'BASE-008' AND f.code = 'NIGHTMARES';
+UPDATE factions f SET lord_card_id = c.id FROM cards c WHERE c.code = 'BASE-012' AND f.code = 'MEMORIES';
 ```
 
 ### Esempio: pacchetti
@@ -650,7 +729,7 @@ UPDATE factions f JOIN cards c ON c.code = 'BASE-012' SET f.lord_card_id = c.id 
 INSERT INTO packs (name, pack_type, price_credits) VALUES ('Pacchetto base', 'SHOP', 100);
 
 INSERT INTO pack_covers (pack_id, faction_id, name, image_url, sort_order)
-SELECT p.id, f.id, f.lord_title, CONCAT('/images/packs/base-', LOWER(f.code), '.webp'), f.id
+SELECT p.id, f.id, f.lord_title, CONCAT('/images/packs/base-', LOWER(f.code), '-v1.webp'), f.id
 FROM packs p, factions f
 WHERE p.name = 'Pacchetto base';
 
@@ -694,27 +773,28 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Punto | Da decidere | Proposta | Chi |
 |-------|-------------|----------|-----|
 | Come si ottengono i crediti in fase 1 | Bonus di registrazione, ricompensa giornaliera, premi per le vittorie, vendita di carte doppie... Determina i valori di `credit_transactions.type` | Ricompensa giornaliera + premio vittoria; bonus di registrazione solo se set iniziale e benvenuto non bastano | DGS (Maie) |
-| Set iniziale e benvenuto: dettagli | Fazioni del set iniziale (tutte e tre o una scelta dal giocatore) e contenuto dei pacchetti di benvenuto (punto 14.7 del regolamento) | Tutte e tre le fazioni; benvenuto come il pacchetto base | Maie + Nicolas |
+| Set iniziale e benvenuto: dettagli | Deciso: set iniziale casuale con il limite di copie, mazzo composto dal giocatore. Da decidere: fazioni del set iniziale (tutte e tre o una scelta dal giocatore) e contenuto dei pacchetti di benvenuto | Tutte e tre le fazioni; benvenuto come il pacchetto base | Maie + Nicolas |
+| Catalogo minimo | Quante carte servono in fase 1. Il set iniziale richiede almeno 7 Comuni e 3 Rare diverse; oggi le carte sono 12 (3 per rarità) | Circa 30 carte; nel frattempo si sviluppa con le carte finte di `db/testdata` | Maie + Nicolas + DGS |
 | Pesi e numeri dei pacchetti | Prezzo, carte per slot, peso delle Leggendarie nello slot Epica/Leggendaria, probabilità della full art | Pacchetto da 5 carte (3 Comuni, 1 Rara, 1 Epica o Leggendaria con peso 10), full art 5% | Maie + Nicolas |
 | Pesi per singola carta | Dentro una rarità ogni carta ha la stessa probabilità, oppure servono pesi per carta (`cards.drop_weight`)? | Stessa probabilità dentro la rarità | Maie + Nicolas |
 | Espansioni e mazzi | Se le carte di tutte le espansioni si possono usare insieme in un mazzo, o servono formati con solo alcune espansioni | Tutte insieme in fase 1 | Nicolas + DGS |
 | Pacchetti non aperti | Il pacchetto si apre subito all'acquisto, oppure l'utente può tenerlo e aprirlo dopo (servirebbe un inventario dei pacchetti) | Apertura immediata | DGS + WMD |
-| Punti vita e limite di round | Valori di `game_modes` dopo le simulazioni del motore: con 20 punti vita quasi tutte le partite finiscono a mazzo esaurito (regolamento 14.1 e 14.2) | 20 punti vita e 60 round finché non si decide | Maie + Nicolas |
+| Punti vita e limite di round | Valori di `game_modes` dopo le simulazioni del motore: con 20 punti vita quasi tutte le partite finiscono a mazzo esaurito (vedi i punti da valutare del regolamento) | 20 punti vita e 60 round finché non si decide | Maie + Nicolas |
 | Regole del rank | Quante partite al giorno contro lo stesso avversario contano, quanto vale ogni partita (fattore K dell'Elo), premio in crediti | Prime 3 partite del giorno, K = 32 | Nicolas + Maie |
-| Modifica di carte già distribuite | Se l'admin può cambiare ATT/DIF di una carta che gli utenti già possiedono. Lo storico è protetto dalle copie dei mazzi in `matches`, ma l'immagine va ricomposta e i mazzi esistenti potrebbero diventare non validi | Permessa, sempre con l'immagine ricomposta e con ricontrollo dei mazzi alla sfida | Tutti |
+| Modifica di carte già distribuite | Se l'admin può cambiare ATT/DIF di una carta che gli utenti già possiedono. Lo storico è protetto dalle copie dei mazzi in `matches` e la carta si rimonta da sola, ma i mazzi esistenti potrebbero diventare non validi | Permessa, con ricontrollo dei mazzi alla sfida | Tutti |
 | Mazzi non validi | Si possono salvare come bozza (servirebbe `decks.is_valid`) o si salvano solo i mazzi validi? | Solo mazzi validi; un mazzo che lo diventa dopo uno scambio viene segnalato alla sfida | SWD + WMD |
 | Carte impegnate in scambi in attesa | Se una carta offerta in uno scambio in attesa resta usabile (in altri scambi e nei mazzi) o viene bloccata finché lo scambio non si chiude | Non bloccata: tutto si ricontrolla quando lo scambio viene accettato | SWD |
 | Scadenza di scambi e sfide | Se una proposta in attesa scade dopo un certo tempo (servirebbe uno stato `EXPIRED`) | Nessuna scadenza in fase 1; chi propone può annullare | Tutti |
-| Catalogo degli effetti | Lista definitiva dei circa 20 effetti e quali carte li hanno (righe di `effects` e `card_effects`) | Il catalogo della proposta di regolamento | Nicolas + Valerio |
+| Catalogo degli effetti | Lista definitiva delle keyword di Nicolas, valori di X e quali carte li hanno (righe di `effects` e `card_effects`) | La lista di Nicolas, con l'abbinamento alle carte proposto nel regolamento | Nicolas + Maie |
+| Limiti della lista amici | Se c'è un numero massimo di amici o di richieste in sospeso | Nessun limite in fase 1 | SWD + DGS |
 | Carte non creatura (incantesimi, potenziamenti) | Seconda variante suggerita dal brief. Servirebbero `cards.card_type` e ATT/DIF facoltativi | Non in fase 1; si aggiunge con una migration solo se si decide di farla | Tutti |
-| Notifiche | Se servono avvisi per sfide e scambi ricevuti (tabella `notifications`) | Basta un contatore delle richieste in attesa, calcolato da `trades` e `challenges` | WMD + SWD |
+| Notifiche | Se servono avvisi per sfide e scambi ricevuti (tabella `notifications`) | Basta un contatore delle richieste in attesa, calcolato da `friendships`, `trades` e `challenges` | WMD + SWD |
 
 ### Utenti, accesso e privacy
 
 | Punto | Da decidere | Proposta | Chi |
 |-------|-------------|----------|-----|
-| Autenticazione | Sessioni di Spring Security (`refresh_tokens` si toglie) o JWT (serve `refresh_tokens`) | Sessioni con cookie `HttpOnly` | SWD |
-| Sessioni dopo un riavvio | Solo con le sessioni: in memoria (si perdono a ogni riavvio del server) o su MySQL con Spring Session JDBC (servono le sue tabelle in una migration) | In memoria in fase 1 | SWD |
+| Durata e conservazione dei token | Accesso con JWT deciso. Da fissare: quanto durano token di accesso e refresh token, e dove li tiene il frontend | Token di accesso 15 minuti, in memoria; refresh token 7 giorni, in un cookie `HttpOnly` | SWD (con WMD) |
 | Invio di email | Se il portale invia email (recupero password, verifica dell'account). Senza invio di email `password_reset_tokens` non serve | Solo recupero password, se c'è tempo; altrimenti si toglie la tabella | SWD |
 | Dati alla registrazione | Se oltre a username, email e password si chiede altro (es. data di nascita per l'età minima). I consensi a Privacy e Termini sono già decisi | Solo username, email e password | DGS + SWD |
 | Cancellazione dell'account | Lo schema non cancella mai gli utenti, ma la privacy prevede il diritto alla cancellazione | Anonimizzare l'utente (username ed email sostituiti, `is_enabled = FALSE`) invece di cancellarlo | SWD |
@@ -724,9 +804,17 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 
 | Punto | Da decidere | Proposta | Chi |
 |-------|-------------|----------|-----|
-| Caricamento delle immagini | Dove vanno le carte e le copertine caricate dal backoffice | Cartella del server (volume Docker); nel database solo il percorso | SWD + WMD |
+| Caricamento delle immagini | Dove vanno illustrazioni e copertine caricate dal backoffice | Volume Docker del backend (deciso); nel database solo il percorso | SWD |
+| Creazione delle copie WebP | Chi crea copia grande e miniatura dagli originali | Catalogo ufficiale: uno script Python (Pillow, come il compositore) le crea una volta e si salvano nel repository. Backoffice: il backend le crea al caricamento con una libreria Java che scrive WebP (es. `webp-imageio`) | SWD |
+| Montaggio nel componente | Il componente della carta disegna su canvas oppure sovrappone livelli HTML/CSS | Canvas: stesso risultato delle carte di prova | WMD |
+| Ruolo del compositore Python | Se prepara cornici con finestra trasparente e coordinate delle zone per il frontend (e anteprime), oppure se tutto passa in JavaScript | Da scegliere | SWD + WMD |
 | Fuso orario delle date | In che fuso si salvano le date. Conta per la ricompensa giornaliera e per le partite del giorno che contano per il rank | Tutto in UTC nel database, conversione nel frontend | SWD |
-| Database per i test | Con cosa si testano repository e service: H2 in memoria o MySQL vero (Testcontainers o database di test). H2 non supporta bene colonne `JSON` e alcuni `CHECK` | MySQL vero per i test di integrazione; il motore di gioco si testa senza database | SWD |
+| Database per i test | Con cosa si testano repository e service: H2 in memoria o PostgreSQL vero (Testcontainers). H2 non supporta `JSONB` né gli indici su espressioni come `LOWER(email)` | PostgreSQL 18 vero con Testcontainers, con i dati finti di `db/testdata`; il motore di gioco si testa senza database | SWD |
+| Scambio non più valido | Cosa succede a uno scambio in attesa se l'amicizia viene tolta o se mancano le carte quando si accetta | Annullato in automatico (`CANCELLED`) e messaggio a chi prova ad accettare | SWD |
+| Ricompensa giornaliera chiesta due volte insieme | Due richieste nello stesso momento non devono dare due ricompense | Colonna `users.last_daily_reward_on` e un `UPDATE ... WHERE last_daily_reward_on < :oggi` atomico, quando DGS conferma la ricompensa | SWD |
+| Inizio del "giorno" | Per ricompensa giornaliera e partite del giorno che contano per il rank | Mezzanotte italiana (`Europe/Rome`); nel database le date restano in UTC | SWD + DGS |
+| Sfide in attesa tra le stesse persone | Se A può mandare più sfide in attesa a B | Al massimo una sfida in attesa per coppia | SWD |
+| Effetti con o senza X | Il backoffice deve sapere quando chiedere il valore dell'effetto | Colonna `effects.has_value` | SWD + Nicolas |
 
 ---
 
@@ -740,15 +828,15 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 | Rarità (TIER) | `rarities` |
 | Collezione | `user_cards` |
 | Più mazzi per utente, con vincoli verificati | `decks`, `deck_cards`, `rarities.max_per_deck`, `rarities.max_copies` + service |
-| Scambi liberi in quantità diverse, solo se il destinatario accetta | `trades`, `trade_items` |
+| Scambi in quantità diverse, solo se il destinatario accetta (Dreamscape: solo tra amici) | `friendships`, `trades`, `trade_items` |
 | Sfide con scelta del mazzo, risultato turno per turno per entrambi | `challenges`, `matches.round_log` |
 | Storico delle sfide e dei risultati | `matches` |
 | Creature con attacco, difesa e fazione | `cards` |
 | Fazioni con vantaggi reciproci | `factions`, `faction_advantages` |
 | Fine partita per punti vita, mazzi esauriti o limite, con pareggio | `matches.end_reason`, `matches.winner_id = NULL` |
 | Backoffice per catalogo carte e pacchetti | `card_sets`, `cards`, `packs`, `pack_covers`, `pack_slots`, `pack_slot_rarities` (+ `users.role = 'ADMIN'`) |
-| Modalità di gioco separate e attivabili | `game_modes`, `challenges.game_mode_id` |
-| Abilità speciali delle creature (variante facoltativa) | `effects`, `card_effects` |
+| Modalità di gioco (brief aggiornato: la Base si può modificare) | `game_modes` con la sola BASE, `challenges.game_mode_id` |
+| Effetti delle creature, parte della modalità Base | `effects`, `card_effects` |
 | Pagine statiche (contatti, privacy, termini) | `contact_messages`, `users.privacy_accepted_at`, `users.terms_accepted_at` |
 | Acquisto crediti con denaro reale | **Escluso dalla fase 1**: nessuna tabella |
 
@@ -756,7 +844,7 @@ Decisioni da prendere prima di trasformare la proposta in migration. La colonna 
 
 ## Pagine del portale e tabelle
 
-Collegamento tra la sitemap del portale proposta da WMD (25 ottobre 2026) e le tabelle di questo schema. Il feedback di SWD sulla sitemap è in `docs/riunioni/feedback-sitemap-portale.pdf` (branch `docs/riunione-avvio`). Gli URL sono quelli della sitemap; le API seguono [naming.md](../naming.md) (`/api/v1/`, risorse in inglese al plurale) e l'elenco definitivo sarà in Swagger.
+Collegamento tra la sitemap del portale proposta da WMD (25 ottobre 2026) e le tabelle di questo schema. Il feedback di SWD sulla sitemap è in `docs/riunioni/feedback-sitemap-portale.pdf`; la [guida ai dati per il frontend](../api/guida-frontend.md) spiega le stesse pagine dal punto di vista di chi sviluppa il frontend. Gli URL sono quelli della sitemap; le API seguono [naming.md](../naming.md) (`/api/v1/`, risorse in inglese al plurale) e l'elenco definitivo sarà in Swagger.
 
 | Pagina | URL | Tabelle |
 |--------|-----|---------|
@@ -765,15 +853,16 @@ Collegamento tra la sitemap del portale proposta da WMD (25 ottobre 2026) e le t
 | Contatti | `/contatti` | `contact_messages` |
 | Registrazione | `/registrazione` | `users` (con i consensi), `pack_openings` del set iniziale e del benvenuto, `user_cards` |
 | Benvenuto (nuova) | `/benvenuto` | `pack_openings` con `source = 'SIGNUP'`, `pack_opening_cards` |
-| Dashboard | `/dashboard` | `users.credits`, `pack_opening_cards` (ultime carte), `trades` e `challenges` in attesa |
+| Dashboard | `/dashboard` | `users.credits`, `pack_opening_cards` (ultime carte), `friendships`, `trades` e `challenges` in attesa |
 | Profilo | `/profilo` | `users` |
 | Crediti | `/crediti` | `users.credits`, `credit_transactions` |
 | Negozio | `/negozio` | `packs` (SHOP), `pack_covers`, `pack_slots`, `pack_slot_rarities` |
 | Apertura pacchetto | `/negozio/apertura/{aperturaId}` | `pack_openings`, `pack_opening_cards` |
 | Collezione, Dettaglio carta | `/collezione`, `/collezione/{id}` | `user_cards`, `cards`, `factions`, `rarities`, `faction_advantages`, `card_effects` |
 | Mazzi, Editor mazzo | `/mazzi`, `/mazzi/{id}/modifica` | `decks`, `deck_cards`, `user_cards`, `rarities` (limiti e copie) |
-| Scambi | `/scambi`, `/scambi/nuovo`, `/scambi/{id}` | `trades`, `trade_items`, `user_cards`, `users` (ricerca per username) |
-| Sfide | `/sfide`, `/sfide/nuova`, `/sfide/{id}` | `challenges`, `decks`, `game_modes` attive, `users` |
+| Amici (nuova) | `/amici` | `friendships`, `users` (ricerca per username) |
+| Scambi | `/scambi`, `/scambi/nuovo`, `/scambi/{id}` | `trades`, `trade_items`, `user_cards`, `friendships` (solo amici) |
+| Sfide | `/sfide`, `/sfide/nuova`, `/sfide/{id}` | `challenges`, `decks`, `game_modes`, `users` (tutti i Dreamweaver) |
 | Risultato partita, Storico | `/sfide/{id}/risultato`, `/storico` | `matches` (`round_log`, copie dei mazzi) |
 | Backoffice: statistiche | `/admin` | conteggi su `users`, `cards`, `packs`, `matches`, `credit_transactions` |
 | Backoffice: carte | `/admin/carte` | `cards`, `card_sets`, `card_effects`, `effects` |
@@ -785,12 +874,40 @@ Collegamento tra la sitemap del portale proposta da WMD (25 ottobre 2026) e le t
 
 ## Cosa è cambiato in questa versione
 
-Aggiornamento del 25 ottobre 2026, dopo la proposta di regolamento e il set di carte di prova.
+### 27 ottobre 2026: immagini leggere e cache
+
+| Cosa | Prima | Ora |
+|------|-------|-----|
+| Immagini servite al browser | PNG originali (2,5–3,3 MB ciascuna) | Copie WebP: grande (larghezza 1024 px) e miniatura (larghezza 400 px). Gli originali restano intatti, con i loro metadati, e non si servono |
+| Colonne di `cards` | Solo `illustration_url` e `full_art_illustration_url` | In più `illustration_thumb_url` e `full_art_thumb_url`, con `chk_cards_thumbs` (copia grande e miniatura sempre insieme) |
+| Nomi dei file | `base-004.png` | `base-004-v1.webp` e `base-004-v1-thumb.webp`: la versione nel nome permette la cache per sempre |
+| Ritaglio (`*_focus_y`) | Nel database | Resta nel database: lo applica il JavaScript |
+| Generazione degli UUID | `DEFAULT uuidv7()` | Li genera Hibernate (Spring Boot 4, `@UuidGenerator(style = VERSION_7)`); il default resta per le migration con i dati |
+| Indici | Mancavano su alcune chiavi esterne | Nuovi `idx_refresh_tokens_user` e `idx_pack_opening_cards_opening` |
+| `matches.winner_id` | `ON DELETE SET NULL` | Nessuna azione: una vittoria non diventa mai un pareggio |
+| Set iniziale | "Estratto dalla pool" | Casuale, senza superare le copie massime per carta: forma sempre un mazzo valido, composto dal giocatore |
+| Full art nel mazzo | Non indicata | `deck_cards.is_full_art`, scelta dal giocatore, salvata anche nella copia del mazzo in `matches` |
+| Dati per sviluppo e test | Non previsti | Carte finte in `db/testdata` (`V900+`, codici `TEST-`), solo nel profilo `dev` e nei test |
+
+### 26 ottobre 2026: Dreamscape, PostgreSQL e amici
+
+| Cosa | Prima | Ora |
+|------|-------|-----|
+| Gioco e repository | Tema da scegliere, repository `LaboratorioIntegrato-Divine` | Dreamscape (tema sogni), gruppo Somnia, repository `gruppo-05-dreamscape` |
+| DBMS | MySQL 8.4 LTS | PostgreSQL 18 o successivo: `TIMESTAMPTZ`, `JSONB`, `NUMERIC`, indici `UNIQUE` su `LOWER()` |
+| Chiavi | `BIGINT AUTO_INCREMENT` | UUID v7 su tutte le tabelle (`DEFAULT uuidv7()`); `challenges.game_mode_id` senza default, il service usa BASE |
+| Modalità | BASE senza effetti + EFFECTS | Solo BASE, con gli effetti (brief aggiornato); tolta `game_modes.effects_enabled` |
+| Effetti | `ON_ENTER`, `BEFORE_COMBAT`, `ON_DEATH`, `END_OF_ROUND` | `ON_PLAY`, `WHILE_IN_PLAY`, `END_OF_ROUND`, `ON_DEATH`, `ON_KILL`, dalla lista di Nicolas |
+| Amici | Non previsti | `friendships` (migration `V5`): richiesta da accettare; scambi solo tra amici, senza limiti di valore |
+| Accesso | Sessioni o JWT da decidere | JWT deciso: `refresh_tokens` necessaria |
+| Frontend | Da scegliere | HTML, CSS e JavaScript; guida ai dati in `docs/api/guida-frontend.md` |
+
+### 25 ottobre 2026: regolamento e set di carte di prova
 
 | Cosa | Prima | Ora |
 |------|-------|-----|
 | Rarità | Limite per mazzo | Limite per mazzo e copie massime per rarità (`max_copies`), 4 TIER fino a LEGENDARY |
-| Immagini delle carte | `image_url` | `image_url` (carta finita dal compositore) + `full_art_image_url` per le Leggendarie |
+| Immagini delle carte | `image_url` (immagine unica) | Illustrazione e ritaglio (`illustration_url`, `illustration_focus_y`, `full_art_illustration_url`, `full_art_focus_y`): la carta la monta il componente JavaScript del frontend |
 | Full art | Non prevista | Copia rara della stessa carta (`full_art_quantity`, `is_full_art`, `full_art_chance`) |
 | Lord di fazione | Non previsti | `factions.lord_title` e `lord_card_id`; copertine dei pacchetti in `pack_covers` |
 | Pacchetti | Solo in vendita, slot fissi per TIER | Tipi SHOP/STARTER/WELCOME, slot con rarità pesate (`pack_slot_rarities`), origine dell'apertura (`source`) |

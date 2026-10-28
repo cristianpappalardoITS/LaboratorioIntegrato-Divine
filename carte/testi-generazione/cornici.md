@@ -25,7 +25,7 @@ Servono **12 cornici vuote**: 3 fazioni × 4 rarità, già nei colori della fazi
 ## Messaggio iniziale
 
 ```
-Devi disegnare le cornici vuote di "Dreams & Nightmares", un gioco di carte collezionabili digitale. Ti allego una cornice di riferimento: usala SOLO per la disposizione delle zone (posizioni e proporzioni), non per colori e decorazioni.
+Devi disegnare le cornici vuote di "Dreamscape", un gioco di carte collezionabili digitale. Ti allego una cornice di riferimento: usala SOLO per la disposizione delle zone (posizioni e proporzioni), non per colori e decorazioni.
 
 Mi servono 12 cornici: 3 fazioni × 4 rarità. Le genereremo una alla volta.
 

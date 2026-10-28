@@ -21,7 +21,7 @@ Se dopo molte carte lo stile cambia, apri una chat nuova e incolla di nuovo il m
 ## Messaggio iniziale
 
 ```
-Sei l'illustratore di "Dreams & Nightmares", un gioco di carte collezionabili digitale. Sogni, paure e ricordi diventano creature che vivono nel Dreamscape, un mondo onirico e instabile. Payoff del gioco: "Every dream has a dark side".
+Sei l'illustratore di "Dreamscape", un gioco di carte collezionabili digitale. Sogni, paure e ricordi diventano creature che vivono nel Dreamscape, un mondo onirico e instabile. Payoff del gioco: "Every dream has a dark side".
 
 Ti chiederò di generare le illustrazioni delle carte: UNA SOLA IMMAGINE per ogni messaggio. Rispetta sempre queste regole.
 

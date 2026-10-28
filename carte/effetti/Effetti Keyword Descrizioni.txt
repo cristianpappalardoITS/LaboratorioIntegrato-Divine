@@ -1,0 +1,39 @@
+Proposta di effetti, loro keyword e applicazione nel gioco:
+Premessa 1: la 'X' sta a indicare effetti che modificano valori di quel numero 'X'
+Premessa 2: uso le parentesi quadre per identificare terminologie non ancora finalizzate al vero e proprio uso nel gioco.
+Per spiegarmi peggio, il testo dovrebbe essere univoco nel suo linguaggio: se mi riferisco al mazzo come "mazzo", non lo
+chiamero mai più "deck", ancora se chiamo una creatura "creatura", non la chiamerò mai più "mostro"
+Premessa 3: mi sono preso la libertà di dire che una carta viene "giocata" per nominare in gergo tecnico quello che succede
+quando si pesca una nuova carta e la si mette in campo. 
+Premessa 4: inserirò un simbolo all'inizio di ciascuna keyword: '*' per gli incubi, '%' per i sogni e '&' per le memorie, indicando
+quale fazione personalmente credo l'effetto si adatterebbe meglio come playstyle. Presumo gli incubi un playstyle aggressivo,
+i sogni conservativo/curativo e le memorie difensivo. 
+
+& Eredità difensiva X: "Dopo che questa carta è stata [uccisa]: la prossima [creatura] che viene giocata riceve +X [difesa]."
+& Eredità offensiva X: "Dopo che questa carta è stata [uccisa]: la prossima [creatura] che viene giocata riceve +X [attacco]."
+*% Indebolimento X: "La [creatura] avversaria ha [attacco] ridotto di X." 
+(deve permanere sul terreno, quindi quando viene uccisa, la creatura avversaria torna ad attacco originale)
+* Castigo X: "Quando questa carta viene giocata: la [creatura] avversaria subisce X danni alla propria [difesa]." 
+(presuppongo di meccanica implicita l'uccisione della creatura e la giocata della prossima, in caso di raggiungimento 0)
+* Flagello X: "Quando questa carta viene giocata: ingfliggi X danni ai [punti vita] dell'avversario.
+%& Riposo X: "Quando questa carta viene giocata: guadagni X [punto vita]."
+& Neutralità: "Questa carta non subisce danni alla propria [difesa] maggiorati e non infligge danni ridotti dalla propria debolezza di [fazione], ma subisce comunque danni ridotti e infligge danni maggiorati."
+(chiarimento: una creatura con Neutralità è immune alla fazione potente contro di essa, mantenendo il proprio potenziamento di fazione contro l'avversario; due creature con Neutralità si infliggono danni normali, 
+senza ulteriore influenza di fazione.)
+*%& Immunità: "Questa carta è immune agli effetti delle altre carte." (presuppone che la carta sia sul campo)
+%& Protezione X: "Questa carta subisce X danni in meno dal combattimento con una carta dell'avversario." 
+*% Esilio: "Quando questa carta viene giocata: rimescola la [creatura] avversaria nel [mazzo] del suo proprietario, poi egli gioca immediatamente la [creatura] in cima al proprio [mazzo]."
+%& Permanenza X: "Questa carta guadagna X [difesa] alla fine di ogni turno."
+*%& Intensificazione X: "Questa carta guadagna X [attacco] alla fine di ogni turno."
+% Culla: "Non subisci danni ai [punti vita]." (niente testo aggiuntivo. Si presume che la carta debba rimanere in campo per funzionare; nè da combattimento nè da effetto).
+*& Miasma X: "Infliggi X danni ai [punti vita] dell'avversario alla fine di ogni turno." (anche qui, deve sopravvivere il turno per funzionare, quindi se viene uccisa non infligge).
+% Speranza: "Quando questa carta viene giocata: guadagna [difesa] pari alle carte rimanenti nel proprio [mazzo], fino alla fine del turno." 
+(chiarimento: se la rimanente difesa è ancora superiore alla difesa originale, torna comunque all'originale)
+* Vendetta: "Quando questa carta viene giocata: guadagna [attacco] pari alle carte nella [pila degli scarti], fino alla fine del turno."
+*%& Ritorno: "Una sola volta, quando questa carta viene [uccisa]: gioca nuovamente questa carta, invece di quella in cima al tuo [mazzo]."
+& Non Sequitur X: "Annulla gli effetti della [creatura] avversaria." (deve rimanere sul terreno: non appena viene uccisa, gli effetti della creatura avversaria ritornano)
+%& Ricorrenza: "Quando questa carta viene giocata: riposiziona la carta in cima alla tua [pila degli scarti] nel tuo [mazzo], poi rimescolalo."
+% Rimescolanza: "Quando questa carta viene giocata: gioca la carta in cima alla tua [pila degli scarti] e manda questa carta alla [pila degli scarti]."
+* Paralisi: "La creatura avversaria perde [attacco] pari alla propria [difesa]." (si presuppone che non possa andare sotto 0)
+& Rimpianto: "I danni ai [punti vita] che subiresti vengono inflitti anche al tuo avversario." (Prevede anche i danni da combattimento)
+* Terrore puro: "Quando questa carta [uccide] una carta avversaria: infliggi danni ai [punti vita] dell'avversario pari alla [difesa] originale della carta [uccisa]."

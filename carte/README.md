@@ -1,8 +1,8 @@
 # Carte · set di prova
 
-Set di prova delle carte di **Dreams & Nightmares**: 12 carte (3 fazioni × 4 rarità) e 3 versioni full art delle Leggendarie.
+Set di prova delle carte di **Dreamscape**: 12 carte (3 fazioni × 4 rarità) e 3 versioni full art delle Leggendarie, che sono anche i Lord delle fazioni.
 
-> 🚧 **Proposta da discutere.** Il tema Dreams & Nightmares non è ancora approvato dal gruppo; nomi, statistiche ed effetti sono esempi presi dalla proposta di regolamento.
+> 🚧 **Proposta da discutere.** Nomi e statistiche sono esempi. Gli effetti stampati sulle carte vengono dal primo catalogo: la proposta di regolamento indica con quale effetto della [lista di Nicolas](effetti/Effetti%20Keyword%20Descrizioni.txt) sostituirli.
 
 La presentazione per il team, con le scelte fatte e tutte le carte, è in [presentazione-set-carte.pdf](presentazione-set-carte.pdf).
 
@@ -16,7 +16,8 @@ carte/
 │   └── alternative/              # illustrazioni scartate, conservate per confronto
 ├── cornici/                      # 12 cornici: cornice_<fazione>_<rarita>.png
 ├── compositore/                  # script che compone le carte + dati delle carte (carte.csv)
-└── testi-generazione/            # testi per generare illustrazioni, cornici e full art
+├── testi-generazione/            # testi per generare illustrazioni, cornici e full art
+└── effetti/                      # lista degli effetti proposta da Nicolas
 ```
 
 ## Come si rigenerano le carte

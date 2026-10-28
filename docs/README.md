@@ -20,17 +20,20 @@ Linee guida e documentazione dettagliata. Per la panoramica del progetto vedi il
 |-----------|-----------|
 | [Proposta di schema del database](database/schema.md) | **Da verificare.** Tabelle, diagrammi ER, scelte, regole dei service, migration Flyway |
 | [schema.sql](database/schema.sql) | SQL completo dello schema, diviso nelle future migration |
+| [Guida ai dati per il frontend](api/guida-frontend.md) | Per il team WMD: API, dati in ingresso e in uscita, accesso con JWT, pagina per pagina |
 
 ## Proposte da discutere
 
 | Documento | Contenuto |
 |-----------|-----------|
-| [Proposta di regolamento](proposte/proposta-regolamento-dreams-nightmares.pdf) (PDF) | Modalità Base ed Effetti, mazzo, rarità, rank, con esempi a tema Dreams & Nightmares e motivazioni delle modifiche |
+| [Proposta di regolamento](proposte/proposta-regolamento-dreamscape.pdf) (PDF) | Regolamento di Dreamscape: modalità Base con effetti, mazzo, rarità, carte iniziali, amici e scambi, rank, punti da valutare |
+
 ## Materiale del gioco
 
 | Documento | Contenuto |
 |-----------|-----------|
 | [Set di carte di prova](../carte/README.md) | 12 carte e 3 full art, cornici, illustrazioni, script che compone le carte |
+| [Lista degli effetti](../carte/effetti/Effetti%20Keyword%20Descrizioni.txt) | Proposta di Nicolas: keyword degli effetti, descrizioni e fazione consigliata |
 | [Presentazione del set di carte](../carte/presentazione-set-carte.pdf) (PDF) | Scelte visive, come sono fatte le carte, tutte le carte create |
 
 ## Altre cartelle
@@ -39,7 +42,7 @@ Linee guida e documentazione dettagliata. Per la panoramica del progetto vedi il
 |----------|-----------|
 | `decisioni/` | Decisioni prese dal gruppo, una per file (`NNN-titolo-breve.md`) |
 | `verbali/` | Verbali delle riunioni (`AAAA-MM-GG-argomento.md`) |
-| `api/` | Elenco degli endpoint REST |
+| `api/` | Elenco degli endpoint REST (la guida per il frontend c'è già) |
 | `diagrammi/` | Diagramma ER, architettura, flussi |
 
 Queste cartelle si creano quando serve il primo documento.
