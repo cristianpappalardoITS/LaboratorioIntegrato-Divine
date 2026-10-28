@@ -13,7 +13,7 @@ Come leggere le tabelle:
 
 ## Calendario degli sprint
 
-Gli sprint sono quelli del campo iterazione della board (oggi chiamato «Kick-off»): Sprint 1 è chiuso, gli sprint 7 e 8 sono più corti.
+Gli sprint sono quelli del campo iterazione della board «Sprint»: Sprint 1 è chiuso, gli sprint 7 e 8 sono più corti.
 
 | Sprint | Date | Milestone |
 |--------|------|-----------|
@@ -23,7 +23,7 @@ Gli sprint sono quelli del campo iterazione della board (oggi chiamato «Kick-of
 | Sprint 5 | 16/11 – 22/11 | SAL (23/11) |
 | Sprint 6 | 23/11 – 29/11 | Presentazione finale (10/12) |
 | Sprint 7 | 30/11 – 05/12 | Presentazione finale (10/12) |
-| Sprint 8 | 06/12 – 08/12 | Presentazione finale (10/12) |
+| Sprint 8 | 06/12 – 10/12 | Presentazione finale (10/12) |
 
 ---
 
@@ -89,7 +89,7 @@ Gli sprint sono quelli del campo iterazione della board (oggi chiamato «Kick-of
 | DGS-13 | Bilanciare il catalogo con le simulazioni | Statistiche finali delle carte, decise con SWD-16 | docs | media |
 | COM-08 | Fare il test finale del portale e correggere i bug | Percorso completo provato da almeno una persona per team; bug aperti come issue `tipo: bug` | test | alta |
 
-## Sprint 8 · 06/12 – 08/12 · Consegna
+## Sprint 8 · 06/12 – 10/12 · Consegna
 
 | Codice | Titolo | Fatto quando | Tipo | Priorità |
 |--------|--------|--------------|------|----------|
@@ -117,7 +117,7 @@ Gli sprint sono quelli del campo iterazione della board (oggi chiamato «Kick-of
 | #43 SWD-01 Regolamento | In Progress | Review: il regolamento v2 è pubblicato |
 | #47 SWD-05 Entità e database | In Progress | Review: lo schema è pronto per lo sviluppo (`docs/documenti-iniziali`) |
 | #67 COM-05 Domande per il cliente | Todo | In Progress: domande e risposte in `docs/presentazione/domande-colloquio.md` |
-| Issue WMD e DGS | Senza assegnatario | Le assegna Cristian a mano. Per DGS manca un account tra i collaboratori del repository |
+| Issue WMD e DGS | Senza assegnatario | Le assegna Cristian a mano. Di DGS tra i collaboratori c'è solo `decosm`: mancano due account |
 
 Queste modifiche sono ancora proposte: non sono state fatte.
 
