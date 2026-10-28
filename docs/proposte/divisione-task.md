@@ -1,10 +1,10 @@
 # Revisione delle task e divisione tra i membri
 
-> 🚧 **Proposta per Cristian, 28/10/2026.** Gli assegnatari li mette Cristian a mano: su GitHub non è stato assegnato nessuno. Fonte: le 68 issue della [board](https://github.com/users/cristianpappalardoITS/projects/2).
+> 🚧 **Proposta per Cristian, 28/10/2026.** Gli assegnatari li mette Cristian a mano: su GitHub non è stato assegnato nessuno. Fonte: le 73 issue della [board](https://github.com/users/cristianpappalardoITS/projects/2).
 
 ## In breve
 
-- **68 issue:** 26 di progettazione (#42–#67) e 42 di sviluppo (#68–#109).
+- **73 issue:** 26 di progettazione (#42–#67), 42 di sviluppo (#68–#109) e 5 aggiunte dopo questa revisione (#111–#115).
 - **Sprint:** ogni issue ha il suo sprint sulla board.
   - Sprint 1: la #45 e la #47, cioè il lavoro della prima settimana già finito.
   - Sprint 2: le altre 24 di progettazione.
@@ -15,7 +15,8 @@
   - 4 si sovrappongono ad altre;
   - non hanno milestone, tranne la #42, né etichette `tipo:` e `priorità:`;
   - quelle di WMD e DGS sono tutte in Todo.
-- **Mancano 5 issue:** pagine Benvenuto, Dashboard, Profilo e Crediti, lato frontend e lato backend; layout comune del frontend; wireframe delle pagine nuove; username GitHub nel README.
+- **Mancavano 5 issue**, ora create (#111–#115): pagine Benvenuto, Dashboard, Profilo e Crediti, lato frontend e lato backend; layout comune del frontend; wireframe delle pagine nuove; username GitHub nel README.
+- **SWD:** Cristian e Marco seguono backend e motore di gioco; Nicolas segue regolamento, valori di gioco, catalogo e bilanciamento.
 - **Divisione:** dallo Sprint 3 al massimo 2 issue a testa per sprint, come chiede `workflow-github.md` (massimo 2 issue In Progress a testa). Lo Sprint 2 ne ha di più, perché raccoglie tutta la progettazione già in corso: molte si chiudono il 2/11.
 
 ---
@@ -44,8 +45,8 @@
 
 ### Da aggiornare
 
-- **Milestone "Primo incontro con il cliente"** sulle issue dello Sprint 2.
-- **Etichette `tipo:` e `priorità:`**, come le issue nuove. La #42 non ha nemmeno `team: COM` e `task-comune`.
+- ✅ **Milestone:** "Primo incontro con il cliente" sulle issue dello Sprint 2, "Presentazione delle prime bozze" sulla #45 e sulla #47.
+- ✅ **Etichette:** `tipo: docs` e `priorità:` su tutte e 26; la #42 ha anche `team: COM` e `task-comune`.
 - **Titoli con il verbo all'infinito** (`workflow-github.md`), es. `[SWD-02] Progettare il motore di gioco`. Facoltativo, ma rende la board uniforme.
 - **#56 WMD-08:** nella descrizione "turni" diventa "round", come nel regolamento.
 
@@ -53,13 +54,13 @@
 
 ## 2. Issue che mancano
 
-| Codice | Titolo | Sprint | Perché |
-|--------|--------|--------|--------|
-| COM-10 | Aggiungere gli username GitHub nel README e invitare chi manca | 2 | Lo chiede il brief. Di DGS tra i collaboratori c'è solo `decosm`: mancano due account |
-| WMD-21 | Disegnare i wireframe di Amici, Benvenuto, Profilo e backoffice | 3 | Sono pagine nuove della sitemap, senza wireframe |
-| WMD-22 | Realizzare il layout comune del frontend | 3 | Menu, intestazione, piè di pagina e stili di base servono a tutte le pagine |
-| WMD-23 | Realizzare Benvenuto, Dashboard, Profilo e Crediti | 5 | Pagine obbligatorie dell'area utente, non coperte da nessuna issue |
-| SWD-25 | Implementare profilo, cambio password, riepilogo e ricompensa giornaliera | 5 | `/me/welcome`, `/me/summary`, cambio di email e password, movimenti dei crediti. La ricompensa dipende dalla #61 |
+| Issue | Titolo | Sprint | Perché |
+|-------|--------|--------|--------|
+| #111 COM-10 | Aggiungere gli username GitHub nel README e invitare chi manca | 2 | Lo chiede il brief. Di DGS tra i collaboratori c'è solo `decosm`: mancano due account |
+| #112 WMD-21 | Disegnare i wireframe di Amici, Benvenuto, Profilo e backoffice | 3 | Sono pagine nuove della sitemap, senza wireframe |
+| #113 WMD-22 | Realizzare il layout comune del frontend | 3 | Menu, intestazione, piè di pagina e stili di base servono a tutte le pagine |
+| #114 WMD-23 | Realizzare Benvenuto, Dashboard, Profilo e Crediti | 5 | Pagine obbligatorie dell'area utente, non coperte da nessuna issue |
+| #115 SWD-25 | Implementare profilo, cambio password, riepilogo e ricompensa giornaliera | 5 | `/me/welcome`, `/me/summary`, cambio di email e password, movimenti dei crediti. La ricompensa dipende dalla #61 |
 
 ---
 
@@ -67,7 +68,7 @@
 
 Criteri:
 
-- **SWD:** Cristian sulle basi e sull'integrazione, Marco su dati, accesso, pacchetti e scambi, Nicolas sul motore e sugli effetti.
+- **SWD:** Cristian su basi, motore di gioco e integrazione; Marco su dati, accesso, pacchetti, scambi e test. Nicolas su regolamento, valori di gioco, catalogo e bilanciamento, insieme a DGS.
 - **WMD:** Gaia (TL) su struttura, layout e qualità; Alessandro, Daniele e Yuri si dividono le aree, e chi ha disegnato il wireframe di una pagina poi la sviluppa.
 - **DGS:** Sara (TL) su concept, identità e marketing, Valerio su lore, testi e illustrazioni, Maie su economia e bilanciamento.
 
@@ -86,7 +87,7 @@ Gli sprint sono quelli della board: dallo Sprint 3 in poi le date sono quelle im
 |-------|-----|
 | #42 Presentazione del 2 novembre | Cristian, Marco |
 | #43 SWD-01 Regolamento e valori | Nicolas, Marco |
-| #44 SWD-02 Progettazione del motore | Nicolas |
+| #44 SWD-02 Progettazione del motore | Cristian |
 | #46 SWD-04 Architettura e API | Marco |
 | #48 SWD-06 Statistiche delle carte | Nicolas, Marco |
 | #49 WMD-01 Sitemap e user journey | Gaia |
@@ -108,21 +109,21 @@ Gli sprint sono quelli della board: dallo Sprint 3 in poi le date sono quelle im
 | #65 COM-03 Nome, logo e identità | Sara, Gaia |
 | #66 COM-04 Riunione sul bilanciamento | Nicolas, Maie |
 | #67 COM-05 Domande per il cliente | Cristian, Marco |
-| COM-10 Username GitHub nel README | Cristian (issue da creare) |
+| #111 COM-10 Username GitHub nel README | Cristian |
 
 ### Sprint 3 · 02/11 – 08/11
 
 | Issue | Chi |
 |-------|-----|
 | #68 SWD-07 Progetto Spring Boot con Docker | Cristian |
-| #76 COM-06 Decisioni del colloquio | Cristian |
+| #70 SWD-09 Modulo del motore | Cristian |
 | #69 SWD-08 Migration e dati finti | Marco |
 | #71 SWD-10 Registrazione e accesso JWT | Marco |
-| #70 SWD-09 Modulo del motore | Nicolas |
+| #76 COM-06 Decisioni del colloquio | Nicolas |
 | #72 WMD-09 Progetto frontend | Gaia |
-| WMD-22 Layout comune | Gaia, Yuri (issue da creare) |
+| #113 WMD-22 Layout comune | Gaia, Yuri |
 | #73 WMD-10 Pagine di registrazione e accesso | Alessandro |
-| WMD-21 Wireframe Amici, Benvenuto, Profilo, backoffice | Daniele (issue da creare) |
+| #112 WMD-21 Wireframe Amici, Benvenuto, Profilo, backoffice | Daniele |
 | #74 DGS-07 Catalogo della fase 1 | Maie (con Nicolas) |
 | #75 DGS-08 Identità visiva definitiva | Sara |
 
@@ -133,7 +134,7 @@ Gli sprint sono quelli della board: dallo Sprint 3 in poi le date sono quelle im
 | #77 SWD-11 API del catalogo | Cristian |
 | #80 SWD-14 Collezione e mazzi | Cristian |
 | #78 SWD-12 Crediti e pacchetti | Marco |
-| #79 SWD-13 Round del motore | Nicolas |
+| #79 SWD-13 Round del motore | Marco |
 | #81 WMD-11 Componente della carta | Yuri, con il supporto di Gaia |
 | #82 WMD-12 Negozio e apertura pacchetti | Daniele |
 | #83 WMD-13 Collezione e dettaglio | Alessandro |
@@ -146,12 +147,11 @@ Gli sprint sono quelli della board: dallo Sprint 3 in poi le date sono quelle im
 |-------|-----|
 | #92 COM-07 Preparazione del SAL | Cristian |
 | #87 SWD-16 Simulazioni di punti vita e round | Marco (con Maie) |
-| SWD-25 Profilo, password, riepilogo, ricompensa | Marco (issue da creare) |
-| #86 SWD-15 Effetti nel motore | Nicolas |
-| #88 SWD-17 Test di integrazione | Nicolas |
+| #115 SWD-25 Profilo, password, riepilogo, ricompensa | Marco |
+| #86 SWD-15 Effetti nel motore | Cristian |
 | #89 WMD-14 Editor dei mazzi | Alessandro |
 | #90 WMD-15 Pagine statiche | Daniele |
-| WMD-23 Benvenuto, Dashboard, Profilo, Crediti | Yuri (issue da creare) |
+| #114 WMD-23 Benvenuto, Dashboard, Profilo, Crediti | Yuri |
 | #91 DGS-11 Copertine dei pacchetti con i Lord | Valerio |
 
 ### Sprint 6 · 23/11 – 29/11
@@ -160,7 +160,8 @@ Gli sprint sono quelli della board: dallo Sprint 3 in poi le date sono quelle im
 |-------|-----|
 | #94 SWD-19 Sfide, partita e storico | Cristian |
 | #93 SWD-18 Amici e scambi | Marco |
-| #95 SWD-20 API del backoffice | Nicolas |
+| #88 SWD-17 Test di integrazione | Marco (sulla board è nello Sprint 5: conviene spostarla nel 6) |
+| #95 SWD-20 API del backoffice | Cristian |
 | #96 WMD-16 Amici e Scambi | Daniele |
 | #97 WMD-17 Sfide, replay e storico | Yuri |
 | #101 WMD-18 Backoffice | Alessandro (sulla board è nello Sprint 7: conviene anticiparla, così parte nel 6 e finisce nel 7) |
@@ -186,7 +187,7 @@ Gli sprint sono quelli della board: dallo Sprint 3 in poi le date sono quelle im
 
 | Issue | Chi |
 |-------|-----|
-| #106 SWD-23 Rank con Elo | Nicolas |
+| #106 SWD-23 Rank con Elo | Cristian |
 | #107 SWD-24 Recupero password via email | Marco |
 | #108 WMD-20 Classifica e rank | Yuri |
 | #109 DGS-14 Acquisto di crediti | Maie |
@@ -199,9 +200,9 @@ Conta le issue ancora da fare dallo Sprint 2 allo Sprint 8: senza lo Sprint 1, l
 
 | Persona | Team | Sprint 2 | Sprint 3–8 | Totale | Sprint con più di 2 issue |
 |---------|------|----------|------------|--------|---------------------------|
-| Cristian | SWD (TL) | 3 | 8 | 11 | 2 |
-| Marco | SWD | 5 | 8 | 13 | 2 |
-| Nicolas | SWD | 5 | 8 | 13 | 2 |
+| Cristian | SWD (TL) | 4 | 10 | 14 | 2 |
+| Marco | SWD | 5 | 10 | 15 | 2 |
+| Nicolas | SWD | 4 | 4 | 8 | 2 |
 | Gaia | WMD (TL) | 3 | 5 | 8 | 2 |
 | Alessandro | WMD | 2 | 4 | 6 | – |
 | Daniele | WMD | 2 | 5 | 7 | – |
@@ -210,10 +211,24 @@ Conta le issue ancora da fare dallo Sprint 2 allo Sprint 8: senza lo Sprint 1, l
 | Valerio | DGS | 3 | 4 | 7 | 2 |
 | Maie | DGS | 2 | 3 | 5 | – |
 
-Dallo Sprint 3 nessuno ha più di 2 issue nello stesso sprint. SWD ne ha di più perché backend e motore sono la parte più lunga del progetto. Se serve alleggerire, le prime da spostare sono la #88 (test di integrazione), da Nicolas ad Alessandro o Daniele, e la #87 (simulazioni), da Marco a Maie con il supporto di Nicolas.
+Dallo Sprint 3 nessuno ha più di 2 issue nello stesso sprint. Backend e motore stanno su Cristian e Marco: 10 issue a testa in sei sprint, cioè 2 a sprint quasi sempre. Per stare in questo limite la #88 passa dallo Sprint 5 al 6. Se il carico non regge, la prima da spostare è la #99 (Swagger e README), che si può dividere tra chi ha scritto ogni parte.
 
 ## 5. Da chiarire
 
 1. **Account GitHub di DGS:** tra i collaboratori del repository DGS ha un solo account, `decosm` (De Cosmo). `V1n5Fr4n` è un docente, come Shadi Lahham (`shadi-lahham-its`) e Michele Leone (`mLeoneITS`). Gli altri due membri di DGS vanno invitati, altrimenti non si possono assegnare le loro issue.
-2. **Nicolas sul motore:** la divisione gli dà il motore intero (#44, #70, #79, #86). Se Cristian preferisce dividerlo, la prima a passare a un altro è la #88.
-3. **Chi applica le modifiche:** stati, milestone, etichette e le 5 issue nuove li posso fare io con `gh`; gli assegnatari restano a Cristian.
+2. **Modifiche sulla board:** stati, milestone, etichette e le 5 issue nuove sono applicati con `gh` (vedi la sezione 6). Gli assegnatari restano a Cristian.
+
+## 6. Modifiche applicate sulla board il 28/10
+
+| Cosa | Issue |
+|------|-------|
+| Sprint 1 | #45, #47 |
+| Sprint 2 | le altre 24 di progettazione e la #111 |
+| Stato Done e issue chiusa | #45 |
+| Stato Review | #43 |
+| Stato In Progress | #49, #67 |
+| Milestone ed etichette `tipo:` e `priorità:` | tutte le 26 di progettazione |
+| Issue nuove, in Todo, con sprint e milestone | #111 (Sprint 2), #112 e #113 (Sprint 3), #114 e #115 (Sprint 5) |
+
+Non sono stati cambiati: assegnatari, titoli, descrizioni, e lo sprint della #88 e della #101 (proposti nello Sprint 6).
+
