@@ -27,6 +27,7 @@ Linee guida e documentazione dettagliata. Per la panoramica del progetto vedi il
 | Documento | Contenuto |
 |-----------|-----------|
 | [Proposta di regolamento](proposte/proposta-regolamento-dreamscape.pdf) (PDF) | Regolamento di Dreamscape: modalità Base con effetti, mazzo, rarità, carte iniziali, amici e scambi, rank, punti da valutare |
+| [Rilascio su AWS](proposte/rilascio-aws.md) | **Ipotesi, fuori dalla consegna.** Architettura su AWS, motore su Lambda, regole da seguire da subito per poterci arrivare senza riscrivere il codice |
 
 ## Materiale del gioco
 
