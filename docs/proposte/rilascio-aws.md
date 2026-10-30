@@ -5,8 +5,8 @@
 
 ## 1. L'idea in breve
 
-- Oggi tutto gira sul proprio PC: backend Spring Boot, motore come libreria dentro il backend, PostgreSQL in Docker, frontend servito da una cartella.
-- Su AWS ogni pezzo avrebbe il suo servizio. Il codice resta lo stesso: cambiano **la configurazione** e **poche classi** dietro a un'interfaccia.
+- Oggi tutto il progetto gira sul proprio PC con **un solo `docker compose up`**, come chiede la issue #100: un container per il backend Spring Boot (con il motore dentro, come libreria), uno per PostgreSQL e uno per il frontend.
+- Su AWS ogni pezzo avrebbe il suo servizio. Il codice resta lo stesso: cambiano **la configurazione** e **poche classi** dietro a un'interfaccia. L'immagine Docker del backend è la stessa che girerebbe sull'EC2.
 - Per questo bastano le [regole del capitolo 4](#4-regole-da-seguire-da-subito), da seguire già adesso.
 
 ## 2. Architettura ipotizzata
@@ -55,14 +55,14 @@ Non serve un framework come Quarkus o Micronaut: basta una piccola classe `Handl
 
 | Pezzo | In locale (oggi) | Su AWS (ipotesi) | Cosa cambia nel codice |
 |-------|------------------|------------------|------------------------|
-| Frontend | Cartella servita in locale | S3 + CloudFront | Niente, se le chiamate usano percorsi relativi |
-| Backend | `localhost:8080` | EC2 | Niente: solo variabili d'ambiente |
-| Database | PostgreSQL 18 in Docker | RDS per PostgreSQL | Niente: solo `DB_URL`, utente e password |
-| Motore | Libreria chiamata direttamente | Lambda | Un'altra implementazione di `BattleSimulator` |
-| Immagini | Cartella sul disco | S3 | Un'altra implementazione di `FileStorage` |
+| Frontend | Container del frontend | S3 + CloudFront | Niente, se le chiamate usano percorsi relativi |
+| Backend | Container del backend | La stessa immagine Docker su EC2 | Niente: solo variabili d'ambiente |
+| Database | Container di PostgreSQL 18 | RDS per PostgreSQL | Niente: solo `DB_URL`, utente e password |
+| Motore | Libreria chiamata direttamente dal backend | Lambda | Un'altra implementazione di `BattleSimulator` |
+| Immagini | Cartella montata come volume nel container del backend | S3 | Un'altra implementazione di `FileStorage` |
 | Email | Scritte nel log | SNS + SQS + Lambda + SES | Un'altra implementazione di `EmailSender` |
 | Lavori programmati | `@Scheduled` di Spring | EventBridge + Lambda (oppure `@Scheduled` anche su AWS) | Nessuno, se la logica sta in un service |
-| Segreti | `application-local.properties` (in `.gitignore`) | Parameter Store, passati come variabili d'ambiente | Niente |
+| Segreti | File `.env` letto da Docker Compose (in `.gitignore`) | Parameter Store, passati come variabili d'ambiente | Niente |
 
 ## 4. Regole da seguire da subito
 
@@ -113,35 +113,45 @@ spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/dreamscape}
 app.storage.images-dir=${IMAGES_DIR:./data/images}
 ```
 
-Variabili previste (elenco da completare):
+Variabili previste (elenco da completare). In locale le passa Docker Compose, prendendole dal file `.env`:
 
 | Variabile | Esempio in locale |
 |-----------|-------------------|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/dreamscape` |
-| `DB_USERNAME`, `DB_PASSWORD` | Quelle del proprio Docker |
-| `JWT_SECRET` | Una stringa lunga, solo nel proprio `application-local.properties` |
-| `IMAGES_DIR` | `./data/images` |
+| `DB_URL` | `jdbc:postgresql://db:5432/dreamscape` (`db` è il nome del servizio nel compose) |
+| `DB_USERNAME`, `DB_PASSWORD` | Quelle scritte nel proprio `.env` |
+| `JWT_SECRET` | Una stringa lunga, solo nel proprio `.env` |
+| `IMAGES_DIR` | `/data/images`, montata come volume |
 | `SPRING_PROFILES_ACTIVE` | `dev` |
 
-### 4.4 Backend senza stato
+Nel repository si carica solo un `.env.example` con i nomi delle variabili e valori finti. Il `.env` vero resta in `.gitignore`.
+
+### 4.4 Docker
+
+- Tutto il progetto parte con **un solo `docker compose up`**: backend, database e frontend.
+- Il backend ha il suo `Dockerfile`, che crea un'immagine con il jar di Spring Boot. Il motore è dentro il jar, come libreria.
+- Nell'immagine non ci sono password né file di configurazione locali: tutto arriva dalle variabili d'ambiente.
+- I dati che devono restare (database, immagini caricate) stanno in **volumi**, non dentro i container.
+- Il frontend e le API rispondono sulla **stessa porta**: il container del frontend serve i file e manda `/api/*` al backend. Così in locale funziona come su AWS (vedi il [punto 4.7](#47-indirizzi-e-frontend)).
+
+### 4.5 Backend senza stato
 
 - Niente `HttpSession` e niente dati degli utenti tenuti in variabili del server tra una richiesta e l'altra: tutto sta nel database o nel token JWT.
 - Niente file scritti sul disco del server, a parte quelli che passano da `FileStorage`.
 - I lavori programmati devono poter girare **due volte senza fare danni** (es. la chiusura di una stagione già chiusa non fa niente).
 - La logica dei lavori programmati sta in un **service**: `@Scheduled` lo chiama e basta. Così su AWS lo può chiamare anche un'altra cosa.
 
-### 4.5 Email
+### 4.6 Email
 
 - L'email parte **dopo** che la transazione è andata a buon fine (`@TransactionalEventListener` con fase `AFTER_COMMIT`), non in mezzo.
 - Se l'invio fallisce, la richiesta dell'utente non fallisce: l'errore si scrive nel log.
 
-### 4.6 Indirizzi e frontend
+### 4.7 Indirizzi e frontend
 
 - Le API restituiscono percorsi **relativi** per le immagini (`/images/cards/base-004-v1.webp`), come già scritto nella [guida per il frontend](../api/guida-frontend.md). Mai l'indirizzo completo con il dominio.
 - Nel frontend l'indirizzo delle API sta in **un solo punto** (`api.js`), già previsto dalle regole.
 - Frontend e API stanno sotto **lo stesso dominio** (in locale come su AWS). Serve perché il refresh token viaggia in un cookie `HttpOnly`.
 
-### 4.7 Varie
+### 4.8 Varie
 
 - Date e ore in **UTC** nel codice e nel database (`Instant`, `timestamptz`). I server su AWS sono in UTC.
 - I log si scrivono sulla **console**, non su file.
@@ -150,7 +160,6 @@ Variabili previste (elenco da completare):
 ## 5. Cosa non facciamo adesso
 
 - Niente account AWS, niente SDK di AWS nel codice, niente classe `Handler` per Lambda.
-- Niente Docker obbligatorio per il backend: Docker serve solo per PostgreSQL.
 - Niente parole su AWS nelle presentazioni al cliente.
 
 ## 6. Punti aperti
